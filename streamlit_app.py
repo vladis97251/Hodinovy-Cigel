@@ -98,6 +98,16 @@ def get_values(df: pd.DataFrame, den: int, hour_idx: int) -> dict:
     return d
 
 
+def get_trend(curr: float, prev: float, threshold: float) -> tuple[str, str]:
+    if curr == 0.0 or prev == 0.0:
+        return ("", "")
+    if curr > prev + threshold:
+        return ("↑", "#27ae60")
+    if curr < prev - threshold:
+        return ("↓", "#e74c3c")
+    return ("→", "#aaa")
+
+
 def make_gauge(value: float, title: str, bar_color: str) -> go.Figure:
     fig = go.Figure(go.Indicator(
         mode="gauge+number",
@@ -140,18 +150,25 @@ def make_gauge(value: float, title: str, bar_color: str) -> go.Figure:
     return fig
 
 
-def mcard(label: str, value: float, unit: str, color: str) -> None:
+def mcard(label: str, value: float, unit: str, color: str,
+          trend: tuple[str, str] | None = None) -> None:
     if value == 0.0:
         display, val_color = "—", "#bbb"
     else:
         display = f"{value:.1f}&nbsp;{unit}".replace(".", ",")
         val_color = "#111"
+    trend_html = ""
+    if trend and trend[0]:
+        trend_html = (
+            f'<span style="font-size:18px;color:{trend[1]};'
+            f'margin-left:8px;vertical-align:middle;">{trend[0]}</span>'
+        )
     st.markdown(
         f"""<div style="background:white;border-radius:8px;padding:13px 17px;
             margin-bottom:9px;border-left:4px solid {color};
             box-shadow:0 1px 4px rgba(0,0,0,0.09);">
             <div style="font-size:12px;color:#888;margin-bottom:3px;">{label}</div>
-            <div style="font-size:22px;font-weight:700;color:{val_color};">{display}</div>
+            <div style="font-size:22px;font-weight:700;color:{val_color};">{display}{trend_html}</div>
         </div>""",
         unsafe_allow_html=True,
     )
@@ -191,6 +208,12 @@ if df is None:
     st.stop()
 
 vals = get_values(df, sel_date.day, hour_idx)
+prev_vals = get_values(df, sel_date.day, hour_idx - 1) if hour_idx > 0 else None
+
+def tr(key: str, threshold: float) -> tuple[str, str]:
+    if prev_vals is None:
+        return ("", "")
+    return get_trend(vals[key], prev_vals[key], threshold)
 
 st.caption(
     f"Dátum: **{sel_date.strftime('%d.%m.%Y')}** | "
@@ -206,30 +229,40 @@ with gc6:
                 unsafe_allow_html=True)
     st.plotly_chart(make_gauge(vals["k6_vykon"], "Výkon K6", "#27ae60"),
                     width='stretch')
+    sym, col = tr("k6_vykon", 0.05)
+    if sym:
+        st.markdown(
+            f'<div style="text-align:center;font-size:28px;color:{col};margin-top:-10px;">{sym}</div>',
+            unsafe_allow_html=True)
 
 with gc7:
     st.markdown("<h3 style='text-align:center;color:#2980b9;'>Kotol K7</h3>",
                 unsafe_allow_html=True)
     st.plotly_chart(make_gauge(vals["k7_vykon"], "Výkon K7", "#2980b9"),
                     width='stretch')
+    sym, col = tr("k7_vykon", 0.05)
+    if sym:
+        st.markdown(
+            f'<div style="text-align:center;font-size:28px;color:{col};margin-top:-10px;">{sym}</div>',
+            unsafe_allow_html=True)
 
 st.divider()
 
 # ── SPOLOČNÉ PARAMETRE ──────────────────────────────────────────
 p1, p2, p3 = st.columns(3)
 with p1:
-    mcard("Výstupná teplota", vals["vystup"], "°C", "#e67e22")
+    mcard("Výstupná teplota", vals["vystup"], "°C", "#e67e22", tr("vystup", 0.5))
 with p2:
-    mcard("Vratná teplota", vals["vratna"], "°C", "#8e44ad")
+    mcard("Vratná teplota", vals["vratna"], "°C", "#8e44ad", tr("vratna", 0.5))
 with p3:
-    mcard("Priemerný prietok", vals["prietok"], "m³/h", "#16a085")
+    mcard("Priemerný prietok", vals["prietok"], "m³/h", "#16a085", tr("prietok", 0.5))
 
 # ── TEPLOTA SPALÍN ──────────────────────────────────────────────
 s1, s2 = st.columns(2)
 with s1:
-    mcard("Teplota spalín K6", vals["k6_spaliny"], "°C", "#27ae60")
+    mcard("Teplota spalín K6", vals["k6_spaliny"], "°C", "#27ae60", tr("k6_spaliny", 0.5))
 with s2:
-    mcard("Teplota spalín K7", vals["k7_spaliny"], "°C", "#2980b9")
+    mcard("Teplota spalín K7", vals["k7_spaliny"], "°C", "#2980b9", tr("k7_spaliny", 0.5))
 
 # ── REFRESH ─────────────────────────────────────────────────────
 st.markdown("")
