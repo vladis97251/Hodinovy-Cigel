@@ -136,9 +136,9 @@ def make_gauge(value: float, title: str, bar_color: str) -> go.Figure:
                 {"range": [3.0, 3.5], "color": "#ffe4e4"},
             ],
             "threshold": {
-                "line": {"color": "red", "width": 5},
-                "thickness": 0.85,
-                "value": 3.0,
+                "line": {"color": bar_color, "width": 4},
+                "thickness": 0.9,
+                "value": value,
             },
         },
     ))
