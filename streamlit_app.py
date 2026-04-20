@@ -1,7 +1,9 @@
 import streamlit as st
 import datetime
+import io
 import pandas as pd
 import plotly.graph_objects as go
+from fpdf import FPDF
 
 st.set_page_config(page_title="Kotolňa K6 & K7", layout="wide")
 
@@ -132,7 +134,7 @@ def make_vykon_chart(day_df: pd.DataFrame) -> go.Figure:
     fig.update_layout(
         title=dict(text="Výkon kotlov (MW)", font=dict(size=15)),
         xaxis=dict(title="Hodina", tickmode="linear", tick0=1, dtick=1, gridcolor="#eee"),
-        yaxis=dict(title="MW", range=[0, 3.5], gridcolor="#eee"),
+        yaxis=dict(title="MW", gridcolor="#eee"),
         height=320,
         margin=dict(t=50, b=40, l=50, r=20),
         paper_bgcolor="rgba(0,0,0,0)",
@@ -147,34 +149,71 @@ def make_teploty_chart(day_df: pd.DataFrame) -> go.Figure:
     fig.add_trace(go.Scatter(
         x=day_df["hodina"], y=day_df["vystup"],
         name="Výstupná", line=dict(color="#e67e22", width=2),
-        mode="lines+markers", marker=dict(size=5),
+        mode="lines+markers", marker=dict(size=5), yaxis="y1",
     ))
     fig.add_trace(go.Scatter(
         x=day_df["hodina"], y=day_df["vratna"],
         name="Vratná", line=dict(color="#8e44ad", width=2),
-        mode="lines+markers", marker=dict(size=5),
+        mode="lines+markers", marker=dict(size=5), yaxis="y1",
     ))
     fig.add_trace(go.Scatter(
         x=day_df["hodina"], y=day_df["k6_spaliny"],
         name="Spaliny K6", line=dict(color="#27ae60", width=1.5, dash="dot"),
-        mode="lines+markers", marker=dict(size=4),
+        mode="lines+markers", marker=dict(size=4), yaxis="y2",
     ))
     fig.add_trace(go.Scatter(
         x=day_df["hodina"], y=day_df["k7_spaliny"],
         name="Spaliny K7", line=dict(color="#2980b9", width=1.5, dash="dot"),
-        mode="lines+markers", marker=dict(size=4),
+        mode="lines+markers", marker=dict(size=4), yaxis="y2",
     ))
     fig.update_layout(
         title=dict(text="Teploty (°C)", font=dict(size=15)),
         xaxis=dict(title="Hodina", tickmode="linear", tick0=1, dtick=1, gridcolor="#eee"),
-        yaxis=dict(title="°C", gridcolor="#eee"),
+        yaxis=dict(title="Výst./Vratn. (°C)", gridcolor="#eee", side="left"),
+        yaxis2=dict(title="Spaliny (°C)", overlaying="y", side="right", showgrid=False),
         height=320,
-        margin=dict(t=50, b=40, l=50, r=20),
+        margin=dict(t=50, b=40, l=50, r=60),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="#fafafa",
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
     )
     return fig
+
+
+def generate_pdf(export_df: pd.DataFrame, date: datetime.date) -> bytes:
+    # Hlavicky bez diakritiky (core PDF fonty nepodporuju vsetky sk znaky)
+    headers = [
+        "Hodina", "K6 Vykon (MW)", "K7 Vykon (MW)",
+        "Vystupna (C)", "Vratna (C)", "Prietok (m3/h)",
+        "Spaliny K6 (C)", "Spaliny K7 (C)",
+    ]
+    col_w = [18, 30, 30, 28, 25, 30, 28, 28]
+
+    pdf = FPDF(orientation="L", format="A4")
+    pdf.set_margins(10, 10, 10)
+    pdf.add_page()
+
+    pdf.set_font("Helvetica", "B", 14)
+    pdf.cell(0, 8, f"Kotolna K6 & K7  –  {date.strftime('%d.%m.%Y')}", ln=True)
+    pdf.ln(3)
+
+    pdf.set_font("Helvetica", "B", 9)
+    pdf.set_fill_color(230, 230, 230)
+    for i, h in enumerate(headers):
+        pdf.cell(col_w[i], 7, h, border=1, align="C", fill=True)
+    pdf.ln()
+
+    pdf.set_font("Helvetica", "", 9)
+    for _, row in export_df.iterrows():
+        values = list(row)
+        for i, val in enumerate(values):
+            text = str(int(val)) if i == 0 else f"{val:.2f}".replace(".", ",")
+            pdf.cell(col_w[i], 6, text, border=1, align="C")
+        pdf.ln()
+
+    buf = io.BytesIO()
+    pdf.output(buf)
+    return buf.getvalue()
 
 
 def make_gauge(value: float, title: str, bar_color: str) -> go.Figure:
@@ -358,12 +397,22 @@ export_df = pd.DataFrame({
     "Spaliny K7 (°C)": day_df["k7_spaliny"],
 })
 csv_str = export_df.to_csv(index=False, sep=";", decimal=",")
-st.download_button(
-    label="⬇ Stiahnuť denný report (CSV)",
-    data=csv_str,
-    file_name=f"kotolna_{sel_date.strftime('%Y-%m-%d')}.csv",
-    mime="text/csv",
-)
+dl1, dl2 = st.columns([1, 1])
+with dl1:
+    st.download_button(
+        label="⬇ Stiahnuť denný report (CSV)",
+        data=csv_str,
+        file_name=f"kotolna_{sel_date.strftime('%Y-%m-%d')}.csv",
+        mime="text/csv",
+    )
+with dl2:
+    pdf_bytes = generate_pdf(export_df, sel_date)
+    st.download_button(
+        label="⬇ Stiahnuť denný report (PDF)",
+        data=pdf_bytes,
+        file_name=f"kotolna_{sel_date.strftime('%Y-%m-%d')}.pdf",
+        mime="application/pdf",
+    )
 
 # ── REFRESH ─────────────────────────────────────────────────────
 st.markdown("")
