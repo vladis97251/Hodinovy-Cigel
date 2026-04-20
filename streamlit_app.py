@@ -284,7 +284,21 @@ def mcard(label: str, value: float, unit: str, color: str,
 
 # ── STREAMLIT UI ────────────────────────────────────────────────
 
-st.markdown("<style>.block-container{padding-top:1rem;}</style>", unsafe_allow_html=True)
+st.markdown("""
+<style>
+.block-container { padding-top: 1rem; }
+
+/* Kompaktnejšie tlačidlá v mriežke hodín */
+div[data-testid="column"] button[kind="secondary"],
+div[data-testid="column"] button[kind="primary"] {
+    padding: 0.25rem 0.1rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    min-height: 2.1rem;
+}
+</style>
+""", unsafe_allow_html=True)
+
 st.title("Prevádzkové parametre kotlov K6 a K7")
 
 today = datetime.date.today()
@@ -300,7 +314,41 @@ sel_date  = day_dates[day_labels.index(sel_label)]
 
 now_h = datetime.datetime.now().hour + 1   # aktuálna hodina (1-based)
 max_h = now_h if sel_date == today else 24
-hour  = st.slider("Hodina", 1, max_h, min(now_h, max_h))
+
+# ── VÝBER HODINY (mriežka tlačidiel 12 × 2) ─────────────────────
+
+# Reset pri zmene dátumu
+if st.session_state.get("last_sel_date") != sel_date:
+    st.session_state.selected_hour = min(now_h, max_h)
+    st.session_state.last_sel_date = sel_date
+
+# Ochrana pred neplatnou hodnotou
+if st.session_state.get("selected_hour", 1) > max_h:
+    st.session_state.selected_hour = max_h
+
+st.markdown(
+    f"<div style='font-size:13px;color:#666;margin-bottom:6px;'>"
+    f"Hodina: <b style='color:#111;'>{st.session_state.selected_hour}:00</b></div>",
+    unsafe_allow_html=True,
+)
+
+for r in range(2):
+    cols = st.columns(12, gap="small")
+    for c in range(12):
+        h = r * 12 + c + 1
+        is_active   = (h == st.session_state.selected_hour)
+        is_disabled = h > max_h
+        if cols[c].button(
+            f"{h:02d}",
+            key=f"hour_btn_{h}",
+            type="primary" if is_active else "secondary",
+            disabled=is_disabled,
+            use_container_width=True,
+        ):
+            st.session_state.selected_hour = h
+            st.rerun()
+
+hour     = st.session_state.selected_hour
 hour_idx = hour - 1   # 0-based pre indexovanie
 
 # ── NAČÍTANIE DÁT ───────────────────────────────────────────────
@@ -384,7 +432,7 @@ with t1:
 with t2:
     st.plotly_chart(make_teploty_chart(day_df), use_container_width=True)
 
-# ── EXPORT CSV ──────────────────────────────────────────────────
+# ── EXPORT CSV / PDF ────────────────────────────────────────────
 st.divider()
 export_df = pd.DataFrame({
     "Hodina": day_df["hodina"],
@@ -400,7 +448,7 @@ csv_str = export_df.to_csv(index=False, sep=";", decimal=",")
 dl1, dl2 = st.columns([1, 1])
 with dl1:
     st.download_button(
-        label="⬇ Stiahnuť denný report (CSV)",
+        label="💾 Stiahnuť denný report (CSV)",
         data=csv_str,
         file_name=f"kotolna_{sel_date.strftime('%Y-%m-%d')}.csv",
         mime="text/csv",
@@ -408,7 +456,7 @@ with dl1:
 with dl2:
     pdf_bytes = generate_pdf(export_df, sel_date)
     st.download_button(
-        label="⬇ Stiahnuť denný report (PDF)",
+        label="💾 Stiahnuť denný report (PDF)",
         data=pdf_bytes,
         file_name=f"kotolna_{sel_date.strftime('%Y-%m-%d')}.pdf",
         mime="application/pdf",
