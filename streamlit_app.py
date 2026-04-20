@@ -5,7 +5,7 @@ import pandas as pd
 import plotly.graph_objects as go
 from fpdf import FPDF
 
-st.set_page_config(page_title="HE - Kotolňa K6 & K7", layout="wide")
+st.set_page_config(page_title="HE · Kotolňa K6 & K7", layout="wide", page_icon="🟡")
 
 # ── HE BRAND FARBY ──────────────────────────────────────────────
 HE_YELLOW = "#F0DC00"
@@ -17,10 +17,6 @@ HE_SURFACE = "#FFFDF8"
 HE_SURFACE_ALT = "#F6F1E5"
 HE_BORDER = "#D7CDB3"
 HE_TEXT_MUTED = "#676050"
-HE_DANGER = "#D4554F"
-HE_ORANGE = "#D97A1F"
-HE_PURPLE = "#7257A8"
-HE_TEAL = "#1D8B76"
 
 # ── KONFIGURÁCIA ────────────────────────────────────────────────
 PREVADZKA_SHEETS = {
@@ -134,226 +130,232 @@ def get_day_df(df: pd.DataFrame, den: int, max_hour: int) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def make_vykon_chart(day_df: pd.DataFrame, active_hour: int) -> go.Figure:
+def make_vykon_chart(day_df: pd.DataFrame) -> go.Figure:
     fig = go.Figure()
-    fig.add_vrect(
-        x0=active_hour - 0.5,
-        x1=active_hour + 0.5,
-        fillcolor="rgba(240,220,0,0.18)",
-        line_width=0,
-        layer="below",
-    )
     fig.add_trace(go.Scatter(
-        x=day_df["hodina"],
-        y=day_df["k6_vykon"],
-        name="Kotol K6",
-        mode="lines+markers",
-        line=dict(color=K6_COLOR, width=3, shape="spline", smoothing=0.45),
-        marker=dict(size=6, color=K6_COLOR),
-        fill="tozeroy",
-        fillcolor="rgba(40,160,40,0.10)",
+        x=day_df["hodina"], y=day_df["k6_vykon"],
+        name="K6", line=dict(color=K6_COLOR, width=2.5),
+        mode="lines+markers", marker=dict(size=5),
     ))
     fig.add_trace(go.Scatter(
-        x=day_df["hodina"],
-        y=day_df["k7_vykon"],
-        name="Kotol K7",
-        mode="lines+markers",
-        line=dict(color=K7_COLOR, width=3, shape="spline", smoothing=0.45),
-        marker=dict(size=6, color=K7_COLOR),
-        fill="tozeroy",
-        fillcolor="rgba(41,128,185,0.08)",
+        x=day_df["hodina"], y=day_df["k7_vykon"],
+        name="K7", line=dict(color=K7_COLOR, width=2.5),
+        mode="lines+markers", marker=dict(size=5),
     ))
     fig.update_layout(
-        height=340,
-        margin=dict(t=20, b=24, l=20, r=20),
+        title=dict(text="Výkon kotlov (MW)", font=dict(size=15)),
+        xaxis=dict(title="Hodina", tickmode="linear", tick0=1, dtick=1, gridcolor="#eee"),
+        yaxis=dict(title="MW", gridcolor="#eee"),
+        height=320,
+        margin=dict(t=50, b=40, l=50, r=20),
         paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor=HE_SURFACE,
-        hovermode="x unified",
-        hoverlabel=dict(bgcolor=HE_BLACK, font_color="white"),
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
-        xaxis=dict(
-            title="Hodina",
-            tickmode="linear",
-            tick0=1,
-            dtick=1,
-            gridcolor="rgba(17,17,17,0.08)",
-            zeroline=False,
-        ),
-        yaxis=dict(
-            title="MW",
-            gridcolor="rgba(17,17,17,0.08)",
-            zeroline=False,
-            rangemode="tozero",
-        ),
+        plot_bgcolor="#fafafa",
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
     )
     return fig
 
 
-def make_teploty_chart(day_df: pd.DataFrame, active_hour: int) -> go.Figure:
+def make_teploty_chart(day_df: pd.DataFrame) -> go.Figure:
     fig = go.Figure()
-    fig.add_vrect(
-        x0=active_hour - 0.5,
-        x1=active_hour + 0.5,
-        fillcolor="rgba(240,220,0,0.18)",
-        line_width=0,
-        layer="below",
-    )
     fig.add_trace(go.Scatter(
-        x=day_df["hodina"],
-        y=day_df["vystup"],
-        name="Výstupná",
-        mode="lines+markers",
-        line=dict(color=HE_ORANGE, width=2.7, shape="spline", smoothing=0.4),
-        marker=dict(size=5, color=HE_ORANGE),
-        yaxis="y1",
+        x=day_df["hodina"], y=day_df["vystup"],
+        name="Výstupná", line=dict(color="#e67e22", width=2),
+        mode="lines+markers", marker=dict(size=5), yaxis="y1",
     ))
     fig.add_trace(go.Scatter(
-        x=day_df["hodina"],
-        y=day_df["vratna"],
-        name="Vratná",
-        mode="lines+markers",
-        line=dict(color=HE_PURPLE, width=2.7, shape="spline", smoothing=0.4),
-        marker=dict(size=5, color=HE_PURPLE),
-        yaxis="y1",
+        x=day_df["hodina"], y=day_df["vratna"],
+        name="Vratná", line=dict(color="#8e44ad", width=2),
+        mode="lines+markers", marker=dict(size=5), yaxis="y1",
     ))
     fig.add_trace(go.Scatter(
-        x=day_df["hodina"],
-        y=day_df["k6_spaliny"],
-        name="Spaliny K6",
-        mode="lines+markers",
-        line=dict(color=K6_COLOR, width=2, dash="dot"),
-        marker=dict(size=4, color=K6_COLOR),
-        yaxis="y2",
+        x=day_df["hodina"], y=day_df["k6_spaliny"],
+        name="Spaliny K6", line=dict(color=K6_COLOR, width=1.5, dash="dot"),
+        mode="lines+markers", marker=dict(size=4), yaxis="y2",
     ))
     fig.add_trace(go.Scatter(
-        x=day_df["hodina"],
-        y=day_df["k7_spaliny"],
-        name="Spaliny K7",
-        mode="lines+markers",
-        line=dict(color=K7_COLOR, width=2, dash="dot"),
-        marker=dict(size=4, color=K7_COLOR),
-        yaxis="y2",
+        x=day_df["hodina"], y=day_df["k7_spaliny"],
+        name="Spaliny K7", line=dict(color=K7_COLOR, width=1.5, dash="dot"),
+        mode="lines+markers", marker=dict(size=4), yaxis="y2",
     ))
     fig.update_layout(
-        height=340,
-        margin=dict(t=20, b=24, l=20, r=20),
+        title=dict(text="Teploty (°C)", font=dict(size=15)),
+        xaxis=dict(title="Hodina", tickmode="linear", tick0=1, dtick=1, gridcolor="#eee"),
+        yaxis=dict(title="Výst./Vratn. (°C)", gridcolor="#eee", side="left"),
+        yaxis2=dict(title="Spaliny (°C)", overlaying="y", side="right", showgrid=False),
+        height=320,
+        margin=dict(t=50, b=40, l=50, r=60),
         paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor=HE_SURFACE,
-        hovermode="x unified",
-        hoverlabel=dict(bgcolor=HE_BLACK, font_color="white"),
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
-        xaxis=dict(
-            title="Hodina",
-            tickmode="linear",
-            tick0=1,
-            dtick=1,
-            gridcolor="rgba(17,17,17,0.08)",
-            zeroline=False,
-        ),
-        yaxis=dict(
-            title="Systémové teploty (°C)",
-            gridcolor="rgba(17,17,17,0.08)",
-            zeroline=False,
-        ),
-        yaxis2=dict(
-            title="Spaliny (°C)",
-            overlaying="y",
-            side="right",
-            showgrid=False,
-            zeroline=False,
-        ),
+        plot_bgcolor="#fafafa",
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
     )
     return fig
+
+
+def _find_dejavu_fonts() -> tuple[str | None, str | None]:
+    """Najdi DejaVuSans.ttf + DejaVuSans-Bold.ttf na systéme.
+    Vracia (regular_path, bold_path) alebo (None, None). DejaVu je potrebný
+    aby PDF vedelo zobraziť slovenskú diakritiku."""
+    from pathlib import Path
+
+    search_dirs: list[Path] = []
+
+    # matplotlib bundles these — najspoľahlivejší zdroj
+    try:
+        import matplotlib
+        search_dirs.append(Path(matplotlib.get_data_path()) / "fonts" / "ttf")
+    except Exception:
+        pass
+
+    # Bundled vedľa skriptu
+    try:
+        search_dirs.append(Path(__file__).parent / "fonts")
+    except NameError:
+        pass
+
+    # Systémové lokácie (Windows / Linux / macOS)
+    search_dirs.extend([
+        Path("C:/Windows/Fonts"),
+        Path("/usr/share/fonts/truetype/dejavu"),
+        Path("/usr/share/fonts/TTF"),
+        Path("/usr/share/fonts/dejavu"),
+        Path("/Library/Fonts"),
+        Path("/System/Library/Fonts"),
+    ])
+
+    for d in search_dirs:
+        try:
+            reg = d / "DejaVuSans.ttf"
+            bold = d / "DejaVuSans-Bold.ttf"
+            if reg.exists() and bold.exists():
+                return str(reg), str(bold)
+        except Exception:
+            continue
+    return None, None
+
+
+def _strip_diacritics(s: str) -> str:
+    """Fallback pre Helvetica: odstráň diakritiku zo stringu."""
+    import unicodedata
+    return "".join(
+        c for c in unicodedata.normalize("NFD", s)
+        if not unicodedata.combining(c)
+    )
 
 
 def generate_pdf(export_df: pd.DataFrame, date: datetime.date) -> bytes:
-    """Brandovany PDF report v HE style: zlta hlavicka, tmavy header tabulky,
-    cierny summary bar so zltou totalnou hodnotou. Core PDF fonty nepodporuju
-    vsetky SK znaky, preto bez diakritiky."""
+    """Brandovaný PDF report v HE štýle: žltá hlavička so zeleným akcentom,
+    tmavý header tabuľky, čierny summary bar so žltou totálnou hodnotou.
+    Ak je dostupný DejaVu Sans, použije sa plná slovenská diakritika."""
 
     # HE brand farby v RGB
-    HE_Y = (240, 220, 0)      # #F0DC00 – žltá
-    HE_K = (17, 17, 17)       # #111111 – čierna
-    HE_G = (40, 160, 40)      # #28A028 – zelená (K6 accent)
+    HE_Y = (240, 220, 0)        # #F0DC00 – žltá
+    HE_K = (17, 17, 17)         # #111111 – čierna
+    HE_G = (40, 160, 40)        # #28A028 – HE zelená
     HE_MUTED = (110, 110, 110)
     HE_ZEBRA = (248, 246, 230)  # veľmi jemná žltkastá pre striedavé riadky
+    K7_BLUE = (41, 128, 185)    # K7 modrá
+
+    # Pokús sa načítať DejaVu – inak fallback na Helvetica bez diakritiky
+    reg_path, bold_path = _find_dejavu_fonts()
 
     class HEReportPDF(FPDF):
-        """FPDF s pevnou HE pätou, ktorá sa volá automaticky na každej stránke."""
+        """FPDF s pevnou HE pätou. Päta obsahuje dvojfarebný pás
+        (žltá nad zelenou) – rovnako ako vo webovej päte."""
         def footer(self):
+            # Žltá + zelená (dvojpás) — mirror webu
             self.set_y(-14)
-            # Žltý tenký prúžok
             self.set_fill_color(*HE_Y)
             self.rect(10, self.get_y(), self.w - 20, 0.7, style="F")
+            self.set_fill_color(*HE_G)
+            self.rect(10, self.get_y() + 0.7, self.w - 20, 0.7, style="F")
+
             self.set_y(-11)
             self.set_x(10)
-            self.set_font("Helvetica", "", 8)
+            self.set_font(font_family, "", 8)
             self.set_text_color(*HE_MUTED)
             half = (self.w - 20) / 2
             self.cell(half, 4,
-                      f"Vystavil: Hluchan   |   Vygenerovane: "
-                      f"{datetime.datetime.now().strftime('%d.%m.%Y %H:%M')}",
+                      txt(f"Vystavil: Hluchaň   |   Vygenerované: "
+                          f"{datetime.datetime.now().strftime('%d.%m.%Y %H:%M')}"),
                       align="L")
             self.cell(half, 4,
-                      "HANDLOVSKA ENERGETIKA, s.r.o.  -  Strajkova 1, 972 51 Handlova  -  ICO: 36 297 747",
+                      txt("HANDLOVSKÁ ENERGETIKA, s.r.o.  ·  Štrajková 1, 972 51 Handlová  ·  IČO: 36 314 439"),
                       align="R")
 
     pdf = HEReportPDF(orientation="L", format="A4")
     pdf.set_auto_page_break(auto=True, margin=16)
     pdf.set_margins(10, 10, 10)
+
+    # Font: DejaVu (plná diakritika) alebo Helvetica (fallback)
+    if reg_path and bold_path:
+        pdf.add_font("DejaVu", "", reg_path)
+        pdf.add_font("DejaVu", "B", bold_path)
+        font_family = "DejaVu"
+        def txt(s: str) -> str:
+            return s
+    else:
+        font_family = "Helvetica"
+        def txt(s: str) -> str:
+            return _strip_diacritics(s)
+
     pdf.add_page()
 
-    # ─── ŽLTÁ HLAVIČKA (brand) ───────────────────────────────────
+    # ─── ŽLTÁ HLAVIČKA (brand) + ZELENÝ AKCENT ───────────────────
     pdf.set_fill_color(*HE_Y)
     pdf.rect(0, 0, pdf.w, 16, style="F")
 
+    # Zelený tenký pás pod žltou hlavičkou — mirror webu (inset green)
+    pdf.set_fill_color(*HE_G)
+    pdf.rect(0, 16, pdf.w, 1.0, style="F")
+
+    # Tenký čierny pruh pod zeleným pásom
+    pdf.set_fill_color(*HE_K)
+    pdf.rect(0, 17.0, pdf.w, 0.6, style="F")
+
     # Logo text vľavo
     pdf.set_xy(10, 3.5)
-    pdf.set_font("Helvetica", "B", 15)
+    pdf.set_font(font_family, "B", 15)
     pdf.set_text_color(*HE_K)
-    pdf.cell(120, 9, "HANDLOVSKA ENERGETIKA", ln=0)
-    pdf.set_font("Helvetica", "", 10)
+    pdf.cell(120, 9, txt("HANDLOVSKÁ ENERGETIKA"), ln=0)
+    pdf.set_font(font_family, "", 10)
     pdf.set_xy(10, 8.5)
     pdf.set_text_color(*HE_K)
     pdf.cell(40, 5, "s.r.o.", ln=0)
 
     # Adresa a IČO vpravo
     pdf.set_xy(pdf.w - 90, 5)
-    pdf.set_font("Helvetica", "", 9)
+    pdf.set_font(font_family, "", 9)
     pdf.set_text_color(*HE_K)
-    pdf.cell(80, 5, "Strajkova 1, 972 51 Handlova", align="R", ln=True)
+    pdf.cell(80, 5, txt("Štrajková 1, 972 51 Handlová"), align="R", ln=True)
     pdf.set_xy(pdf.w - 90, 10)
-    pdf.cell(80, 4, "ICO: 36 297 747", align="R")
-
-    # Tenký čierny pruh pod žltou hlavičkou
-    pdf.set_fill_color(*HE_K)
-    pdf.rect(0, 16, pdf.w, 1.2, style="F")
+    pdf.cell(80, 4, txt("IČO: 36 314 439"), align="R")
 
     # ─── TITULOK ─────────────────────────────────────────────────
-    pdf.set_xy(0, 22)
-    pdf.set_font("Helvetica", "B", 18)
+    pdf.set_xy(0, 21)
+    pdf.set_font(font_family, "B", 17)
     pdf.set_text_color(*HE_K)
-    pdf.cell(pdf.w, 8, "DENNY VYKAZ - KOTOLNA K6 & K7", align="C", ln=True)
+    pdf.cell(pdf.w, 8, txt("DENNÝ VÝKAZ – KOTOLŇA K6 & K7"), align="C", ln=True)
 
-    pdf.set_font("Helvetica", "", 9)
-    pdf.set_text_color(*HE_MUTED)
-    pdf.cell(pdf.w, 5, "PREVADZKOVE PARAMETRE", align="C", ln=True)
+    # Podtitulok v HE zelenej
+    pdf.set_font(font_family, "B", 8.5)
+    pdf.set_text_color(*HE_G)
+    pdf.cell(pdf.w, 4, txt("PREVÁDZKOVÉ PARAMETRE"), align="C", ln=True)
 
     # ─── METADATA BLOK ───────────────────────────────────────────
     pdf.ln(2)
     pdf.set_x(10)
-    pdf.set_font("Helvetica", "B", 10)
+    pdf.set_font(font_family, "B", 10)
     pdf.set_text_color(*HE_K)
-    pdf.cell(28, 6, "Datum:", ln=0)
-    pdf.set_font("Helvetica", "", 10)
+    pdf.cell(28, 6, txt("Dátum:"), ln=0)
+    pdf.set_font(font_family, "", 10)
     pdf.cell(55, 6, date.strftime("%d.%m.%Y"), ln=0)
-    pdf.set_font("Helvetica", "B", 10)
-    pdf.cell(28, 6, "Prevadzka:", ln=0)
-    pdf.set_font("Helvetica", "", 10)
-    pdf.cell(55, 6, "Handlova", ln=0)
-    pdf.set_font("Helvetica", "B", 10)
-    pdf.cell(32, 6, "Pocet hodin:", ln=0)
-    pdf.set_font("Helvetica", "", 10)
+    pdf.set_font(font_family, "B", 10)
+    pdf.cell(28, 6, txt("Prevádzka:"), ln=0)
+    pdf.set_font(font_family, "", 10)
+    pdf.cell(55, 6, txt("Handlová"), ln=0)
+    pdf.set_font(font_family, "B", 10)
+    pdf.cell(32, 6, txt("Počet hodín:"), ln=0)
+    pdf.set_font(font_family, "", 10)
     n_hours = len(export_df)
     pdf.cell(40, 6, f"{n_hours} / 24", ln=True)
 
@@ -361,9 +363,9 @@ def generate_pdf(export_df: pd.DataFrame, date: datetime.date) -> bytes:
 
     # ─── TABUĽKA ─────────────────────────────────────────────────
     headers = [
-        "Hodina", "K6 Vykon (MW)", "K7 Vykon (MW)",
-        "Vystupna (C)", "Vratna (C)", "Prietok (m3/h)",
-        "Spaliny K6 (C)", "Spaliny K7 (C)",
+        "Hodina", "K6 Výkon (MW)", "K7 Výkon (MW)",
+        "Výstupná (°C)", "Vratná (°C)", "Prietok (m³/h)",
+        "Spaliny K6 (°C)", "Spaliny K7 (°C)",
     ]
     col_w = [20, 34, 34, 32, 28, 34, 32, 32]
     total_w = sum(col_w)
@@ -373,16 +375,26 @@ def generate_pdf(export_df: pd.DataFrame, date: datetime.date) -> bytes:
     pdf.set_x(start_x)
     pdf.set_fill_color(*HE_K)
     pdf.set_text_color(*HE_Y)
-    pdf.set_font("Helvetica", "B", 9)
+    pdf.set_font(font_family, "B", 9)
     for i, h in enumerate(headers):
-        pdf.cell(col_w[i], 7, h, border=0, align="C", fill=True)
+        pdf.cell(col_w[i], 7, txt(h), border=0, align="C", fill=True)
     pdf.ln()
+
+    # Tenký zelený akcent pod hlavičkou tabuľky
+    pdf.set_fill_color(*HE_G)
+    pdf.rect(start_x, pdf.get_y(), total_w, 0.6, style="F")
+    pdf.ln(0.6)
 
     # Riadky so zebra striping
     pdf.set_text_color(*HE_K)
-    pdf.set_font("Helvetica", "", 9)
+    pdf.set_font(font_family, "", 9)
     # Dynamická výška riadku podľa počtu hodín (aby sa zmestili všetky)
-    row_h_tbl = 5.0 if n_hours <= 20 else 4.5
+    if n_hours <= 16:
+        row_h_tbl = 5.0
+    elif n_hours <= 20:
+        row_h_tbl = 4.3
+    else:
+        row_h_tbl = 4.0
     for idx, (_, row) in enumerate(export_df.iterrows()):
         pdf.set_x(start_x)
         fill = (idx % 2 == 0)
@@ -417,11 +429,14 @@ def generate_pdf(export_df: pd.DataFrame, date: datetime.date) -> bytes:
     h_k6 = hours_running(k6_ser)
     h_k7 = hours_running(k7_ser)
 
-    # Nadpis sekcie
-    pdf.set_x(10)
-    pdf.set_font("Helvetica", "B", 10)
+    # Nadpis sekcie — so zeleným akcentom vľavo (mirror webu)
+    section_y = pdf.get_y()
+    pdf.set_fill_color(*HE_G)
+    pdf.rect(10, section_y + 0.8, 1.5, 5.5, style="F")
+    pdf.set_xy(13, section_y)
+    pdf.set_font(font_family, "B", 10)
     pdf.set_text_color(*HE_K)
-    pdf.cell(0, 6, "SUHRN ZA DEN", ln=True)
+    pdf.cell(0, 6, txt("SÚHRN ZA DEŇ"), ln=True)
 
     col_lx = 10
     col_rx = pdf.w / 2 + 5
@@ -429,66 +444,70 @@ def generate_pdf(export_df: pd.DataFrame, date: datetime.date) -> bytes:
 
     def sum_row(y, label, v_k6, v_k7, unit):
         pdf.set_xy(col_lx, y)
-        pdf.set_font("Helvetica", "", 9)
+        pdf.set_font(font_family, "", 9)
         pdf.set_text_color(*HE_MUTED)
-        pdf.cell(65, row_h, label, ln=0)
+        pdf.cell(65, row_h, txt(label), ln=0)
         pdf.set_text_color(*HE_K)
-        pdf.set_font("Helvetica", "B", 9)
+        pdf.set_font(font_family, "B", 9)
         pdf.cell(40, row_h, f"{v_k6:.2f} {unit}".replace(".", ","), ln=0)
 
         pdf.set_xy(col_rx, y)
-        pdf.set_font("Helvetica", "", 9)
+        pdf.set_font(font_family, "", 9)
         pdf.set_text_color(*HE_MUTED)
-        pdf.cell(65, row_h, label, ln=0)
+        pdf.cell(65, row_h, txt(label), ln=0)
         pdf.set_text_color(*HE_K)
-        pdf.set_font("Helvetica", "B", 9)
+        pdf.set_font(font_family, "B", 9)
         pdf.cell(40, row_h, f"{v_k7:.2f} {unit}".replace(".", ","), ln=True)
 
     # Hlavičky stĺpcov K6 / K7
     y = pdf.get_y()
     pdf.set_xy(col_lx, y)
-    pdf.set_font("Helvetica", "B", 10)
+    pdf.set_font(font_family, "B", 10)
     pdf.set_text_color(*HE_G)
     pdf.cell(105, row_h + 1, "Kotol K6", ln=0)
     pdf.set_xy(col_rx, y)
-    pdf.set_text_color(41, 128, 185)  # K7 modrá
+    pdf.set_text_color(*K7_BLUE)
     pdf.cell(105, row_h + 1, "Kotol K7", ln=True)
 
     sum_row(pdf.get_y(), "Produkcia tepla:", prod_k6, prod_k7, "MWh")
-    sum_row(pdf.get_y(), "Priemerny vykon:", avg_k6, avg_k7, "MW")
-    sum_row(pdf.get_y(), "Maximalny vykon:", max_k6, max_k7, "MW")
+    sum_row(pdf.get_y(), "Priemerný výkon:", avg_k6, avg_k7, "MW")
+    sum_row(pdf.get_y(), "Maximálny výkon:", max_k6, max_k7, "MW")
 
     # Hodiny v prevádzke (celé čísla)
     y = pdf.get_y()
     pdf.set_xy(col_lx, y)
-    pdf.set_font("Helvetica", "", 9)
+    pdf.set_font(font_family, "", 9)
     pdf.set_text_color(*HE_MUTED)
-    pdf.cell(65, row_h, "Hodin v prevadzke:", ln=0)
+    pdf.cell(65, row_h, txt("Hodín v prevádzke:"), ln=0)
     pdf.set_text_color(*HE_K)
-    pdf.set_font("Helvetica", "B", 9)
+    pdf.set_font(font_family, "B", 9)
     pdf.cell(40, row_h, f"{h_k6} h", ln=0)
     pdf.set_xy(col_rx, y)
-    pdf.set_font("Helvetica", "", 9)
+    pdf.set_font(font_family, "", 9)
     pdf.set_text_color(*HE_MUTED)
-    pdf.cell(65, row_h, "Hodin v prevadzke:", ln=0)
+    pdf.cell(65, row_h, txt("Hodín v prevádzke:"), ln=0)
     pdf.set_text_color(*HE_K)
-    pdf.set_font("Helvetica", "B", 9)
+    pdf.set_font(font_family, "B", 9)
     pdf.cell(40, row_h, f"{h_k7} h", ln=True)
 
     # ─── VEĽKÝ SUMMARY BAR ──────────────────────────────────────
     pdf.ln(2)
     bar_y = pdf.get_y()
     bar_h = 11
+    # Čierny bar
     pdf.set_fill_color(*HE_K)
     pdf.rect(10, bar_y, pdf.w - 20, bar_h, style="F")
+    # Zelený akcent na ľavej hrane
+    pdf.set_fill_color(*HE_G)
+    pdf.rect(10, bar_y, 2.2, bar_h, style="F")
 
-    pdf.set_xy(14, bar_y + 2)
-    pdf.set_font("Helvetica", "B", 12)
+    pdf.set_xy(16, bar_y + 2)
+    pdf.set_font(font_family, "B", 12)
     pdf.set_text_color(255, 255, 255)
-    pdf.cell(120, 7, "PRODUKCIA TEPLA SPOLU:", ln=0)
+    pdf.cell(120, 7, txt("PRODUKCIA TEPLA SPOLU:"), ln=0)
 
     pdf.set_xy(pdf.w - 14 - 100, bar_y + 1.5)
-    pdf.set_font("Helvetica", "B", 15)
+    pdf.set_font(font_family, "B", 15)
     pdf.set_text_color(*HE_Y)
     pdf.cell(100, 8, f"{prod_total:.2f} MWh".replace(".", ","), ln=0, align="R")
 
@@ -498,65 +517,45 @@ def generate_pdf(export_df: pd.DataFrame, date: datetime.date) -> bytes:
 
 
 
-def format_value(value: float, unit: str = "", decimals: int = 2,
-                 zero_as_dash: bool = False) -> str:
-    if zero_as_dash and value == 0.0:
-        return "—"
-    rendered = f"{value:.{decimals}f}".replace(".", ",")
-    return f"{rendered} {unit}".strip()
-
-
-def trend_badge(trend: tuple[str, str] | None) -> str:
-    if not trend or not trend[0]:
-        return '<span class="he-trend-note">bez porovnania</span>'
-
-    trend_map = {
-        "↑": "rastie",
-        "↓": "klesá",
-        "→": "stabilné",
-    }
-    text = trend_map.get(trend[0], "trend")
-    color = trend[1]
-    return (
-        f'<span class="he-trend-badge" '
-        f'style="color:{color};border-color:{color}33;background:{color}12;">'
-        f'{trend[0]} {text}</span>'
+def make_gauge(value: float, title: str, bar_color: str) -> go.Figure:
+    fig = go.Figure(go.Indicator(
+        mode="gauge+number",
+        value=value,
+        title={"text": title, "font": {"size": 16, "color": "#333"}},
+        number={
+            "suffix": " MW",
+            "font": {"size": 34, "color": "#111"},
+            "valueformat": ".2f",
+        },
+        gauge={
+            "axis": {
+                "range": [0, 3.5],
+                "tickvals": [0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5],
+                "ticktext": ["0", "0,5", "1,0", "1,5", "2,0", "2,5", "3,0", "3,5"],
+                "tickfont": {"size": 11},
+                "tickcolor": "#555",
+            },
+            "bar": {"color": bar_color, "thickness": 0.28},
+            "bgcolor": "white",
+            "borderwidth": 1,
+            "bordercolor": "#ddd",
+            "steps": [
+                {"range": [0.0, 3.0], "color": "#f3f3f3"},
+                {"range": [3.0, 3.5], "color": "#ffe4e4"},
+            ],
+            "threshold": {
+                "line": {"color": "red", "width": 5},
+                "thickness": 0.85,
+                "value": 3.0,
+            },
+        },
+    ))
+    fig.update_layout(
+        height=300,
+        margin=dict(t=65, b=20, l=15, r=15),
+        paper_bgcolor="rgba(0,0,0,0)",
     )
-
-
-def render_hero_card(title: str, value: float, unit: str, color: str,
-                     note: str, trend: tuple[str, str] | None = None) -> None:
-    st.markdown(
-        f"""
-        <div class="he-kpi-card" style="border-top: 5px solid {color};">
-            <div class="he-kpi-head">
-                <div class="he-kpi-title" style="color:{color};">{title}</div>
-                {trend_badge(trend)}
-            </div>
-            <div class="he-kpi-value">{format_value(value, unit, 2)}</div>
-            <div class="he-kpi-note">{note}</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-
-def render_stat_card(label: str, value: float, unit: str, color: str,
-                     helper: str, trend: tuple[str, str] | None = None,
-                     decimals: int = 1, zero_as_dash: bool = True) -> None:
-    st.markdown(
-        f"""
-        <div class="he-stat-card" style="border-top: 4px solid {color};">
-            <div class="he-stat-top">
-                <div class="he-stat-label">{label}</div>
-                {trend_badge(trend)}
-            </div>
-            <div class="he-stat-value">{format_value(value, unit, decimals, zero_as_dash)}</div>
-            <div class="he-stat-helper">{helper}</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    return fig
 
 
 def render_section(title: str, subtitle: str) -> None:
@@ -571,21 +570,33 @@ def render_section(title: str, subtitle: str) -> None:
     )
 
 
-def render_context_row(items: list[tuple[str, str]]) -> None:
-    chips = "".join(
-        f"""
-        <div class="he-context-chip">
-            <span>{label}</span>
-            <strong>{value}</strong>
-        </div>
-        """
-        for label, value in items
+def mcard(label: str, value: float, unit: str, color: str,
+          trend: tuple[str, str] | None = None) -> None:
+    if value == 0.0:
+        display, val_color = "—", "#bbb"
+    else:
+        display = f"{value:.1f}&nbsp;{unit}".replace(".", ",")
+        val_color = "#111"
+    trend_html = ""
+    if trend and trend[0]:
+        trend_html = (
+            f'<span style="font-size:18px;color:{trend[1]};'
+            f'margin-left:8px;vertical-align:middle;">{trend[0]}</span>'
+        )
+    st.markdown(
+        f"""<div style="background:white;border-radius:8px;padding:13px 17px;
+            margin-bottom:9px;border-left:4px solid {color};
+            box-shadow:0 1px 4px rgba(0,0,0,0.09);">
+            <div style="font-size:12px;color:#888;margin-bottom:3px;">{label}</div>
+            <div style="font-size:22px;font-weight:700;color:{val_color};">{display}{trend_html}</div>
+        </div>""",
+        unsafe_allow_html=True,
     )
-    st.markdown(f'<div class="he-context-row">{chips}</div>', unsafe_allow_html=True)
 
 
 # ── STREAMLIT UI ────────────────────────────────────────────────
 
+# Globálne štýly + HE brand hlavička
 st.markdown(f"""
 <style>
 :root {{
@@ -617,17 +628,19 @@ st.markdown(f"""
     padding-bottom: 2rem;
 }}
 
-/* HE hlavička – kompaktný štýl prevzatý z streamlit_app.py */
+/* HE hlavička */
 .he-header {{
     background: {HE_BLACK};
-    padding: 16px 22px;
+    padding: 18px 24px;
     border-bottom: 5px solid {HE_YELLOW};
-    border-radius: 6px;
-    margin-bottom: 14px;
+    border-radius: 8px;
+    margin-bottom: 1.1rem;
     display: flex;
     align-items: center;
     gap: 16px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    box-shadow:
+        inset 0 -3px 0 {HE_GREEN},
+        0 18px 36px rgba(17, 17, 17, 0.18);
 }}
 .he-logo-svg {{ width: 52px; height: 52px; flex-shrink: 0; }}
 .he-text-block {{ display: flex; flex-direction: column; justify-content: center; }}
@@ -653,6 +666,36 @@ st.markdown(f"""
     text-transform: uppercase;
 }}
 
+/* Nadpisy sekcií */
+.he-section-copy {{
+    margin: 1.15rem 0 0.85rem;
+}}
+.he-section-title {{
+    color: {HE_BLACK};
+    font-size: 1.25rem;
+    font-weight: 800;
+    letter-spacing: 0.01em;
+    position: relative;
+    padding-left: 0.85rem;
+}}
+.he-section-title::before {{
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0.22em;
+    bottom: 0.22em;
+    width: 4px;
+    border-radius: 2px;
+    background: {HE_GREEN};
+}}
+.he-section-subtitle {{
+    color: {HE_TEXT_MUTED};
+    font-size: 0.95rem;
+    margin-top: 0.2rem;
+    padding-left: 0.85rem;
+}}
+
+/* Malý uppercase label pre ovládače (DEŇ, HODINA...) */
 .he-control-label {{
     margin: 0.2rem 0 0.45rem;
     color: {HE_TEXT_MUTED};
@@ -662,17 +705,16 @@ st.markdown(f"""
     text-transform: uppercase;
 }}
 
+/* Radio ako pill tlačidlá (pre výber dňa) */
 div[data-testid="stRadio"] > label {{
     display: none;
 }}
-
 div[role="radiogroup"] {{
     display: flex;
     flex-wrap: wrap;
     gap: 0.55rem;
     margin-bottom: 0.85rem;
 }}
-
 div[role="radiogroup"] label[data-baseweb="radio"] {{
     margin: 0;
     border: 1px solid {HE_BORDER};
@@ -682,58 +724,57 @@ div[role="radiogroup"] label[data-baseweb="radio"] {{
     min-height: auto;
     box-shadow: 0 6px 18px rgba(17, 17, 17, 0.04);
 }}
-
 div[role="radiogroup"] label[data-baseweb="radio"] > div:first-child {{
     display: none;
 }}
-
 div[role="radiogroup"] label[data-baseweb="radio"] p {{
     margin: 0;
     color: {HE_TEXT_MUTED};
     font-size: 0.95rem;
     font-weight: 600;
 }}
-
+div[role="radiogroup"] label[data-baseweb="radio"]:hover {{
+    border-color: {HE_GREEN};
+}}
+div[role="radiogroup"] label[data-baseweb="radio"]:hover p {{
+    color: {HE_GREEN};
+}}
 div[role="radiogroup"] label[data-baseweb="radio"][aria-checked="true"] {{
     background: {HE_BLACK};
     border-color: {HE_BLACK};
 }}
-
 div[role="radiogroup"] label[data-baseweb="radio"][aria-checked="true"] p {{
     color: white;
 }}
 
+/* Tlačidlá všeobecne (hodinový grid) */
 div[data-testid="stButton"] > button {{
     width: 100%;
     background: rgba(255, 253, 248, 0.88);
     border: 1px solid {HE_BORDER};
     color: {HE_BLACK};
     border-radius: 10px;
-    min-height: 2.1rem;
-    padding: 0.25rem 0.1rem;
-    font-weight: 600;
-    font-size: 0.85rem;
+    min-height: 2.45rem;
+    font-weight: 700;
+    font-size: 0.92rem;
     box-shadow: none;
 }}
-
 div[data-testid="stButton"] > button:hover {{
-    border-color: {HE_BLACK};
-    color: {HE_BLACK};
+    border-color: {HE_GREEN};
+    color: {HE_GREEN};
 }}
-
 div[data-testid="stButton"] > button[kind="primary"] {{
     background: {HE_YELLOW};
     border-color: {HE_YELLOW};
     color: {HE_BLACK};
-    font-weight: 700;
 }}
-
 div[data-testid="stButton"] > button[kind="primary"]:hover {{
-    background: #d4c300;
-    border-color: #d4c300;
+    background: #dac900;
+    border-color: #dac900;
     color: {HE_BLACK};
 }}
 
+/* Download tlačidlá */
 div[data-testid="stDownloadButton"] button {{
     width: 100%;
     background: {HE_SURFACE};
@@ -744,215 +785,38 @@ div[data-testid="stDownloadButton"] button {{
     font-weight: 700;
     box-shadow: var(--he-shadow);
 }}
-
 div[data-testid="stDownloadButton"] button:hover {{
-    border-color: {HE_BLACK};
-    color: {HE_BLACK};
+    border-color: {HE_GREEN};
+    color: {HE_GREEN};
 }}
 
-div[data-testid="stPlotlyChart"] {{
-    background: {HE_SURFACE};
-    border: 1px solid {HE_BORDER};
-    border-radius: var(--he-radius-lg);
-    padding: 0.45rem 0.45rem 0.2rem;
-    box-shadow: var(--he-shadow);
-}}
-
-.he-section-copy {{
-    margin: 1.15rem 0 0.85rem;
-}}
-
-.he-section-title {{
-    color: {HE_BLACK};
-    font-size: 1.25rem;
-    font-weight: 800;
-    letter-spacing: 0.01em;
-}}
-
-.he-section-subtitle {{
-    color: {HE_TEXT_MUTED};
-    font-size: 0.95rem;
-    margin-top: 0.2rem;
-}}
-
-.he-context-row {{
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.7rem;
-    margin: 1rem 0 1.1rem;
-}}
-
-.he-context-chip {{
-    display: flex;
-    align-items: center;
-    gap: 0.55rem;
-    padding: 0.55rem 0.8rem;
-    border-radius: 999px;
-    background: rgba(255, 253, 248, 0.9);
-    border: 1px solid {HE_BORDER};
-    color: {HE_TEXT_MUTED};
-    font-size: 0.9rem;
-    box-shadow: 0 10px 22px rgba(17, 17, 17, 0.04);
-}}
-
-.he-context-chip strong {{
-    color: {HE_BLACK};
-    font-size: 0.92rem;
-}}
-
-.he-kpi-card,
-.he-stat-card,
-.he-support-card {{
-    background: {HE_SURFACE};
-    border: 1px solid {HE_BORDER};
-    border-radius: var(--he-radius-lg);
-    box-shadow: var(--he-shadow);
-}}
-
-.he-kpi-card {{
-    padding: 1.15rem 1.2rem 1rem;
-    min-height: 172px;
-}}
-
-.he-kpi-head,
-.he-stat-top {{
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 0.8rem;
-}}
-
-.he-kpi-title {{
-    font-size: 1rem;
-    font-weight: 800;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-}}
-
-.he-kpi-value {{
-    color: {HE_BLACK};
-    font-size: 2.35rem;
-    font-weight: 900;
-    line-height: 1.05;
-    margin-top: 1rem;
-}}
-
-.he-kpi-note {{
-    color: {HE_TEXT_MUTED};
-    font-size: 0.92rem;
-    margin-top: 0.7rem;
-}}
-
-.he-trend-badge,
-.he-trend-note {{
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 999px;
-    padding: 0.28rem 0.6rem;
-    font-size: 0.75rem;
-    font-weight: 700;
-    white-space: nowrap;
-}}
-
-.he-trend-note {{
-    background: {HE_SURFACE_ALT};
-    color: {HE_TEXT_MUTED};
-    border: 1px solid {HE_BORDER};
-}}
-
-.he-stat-card {{
-    padding: 0.95rem 1rem;
-    min-height: 142px;
-}}
-
-.he-stat-label {{
-    color: {HE_TEXT_MUTED};
-    font-size: 0.84rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.07em;
-}}
-
-.he-stat-value {{
-    color: {HE_BLACK};
-    font-size: 1.72rem;
-    font-weight: 800;
-    margin-top: 0.95rem;
-    line-height: 1.1;
-}}
-
-.he-stat-helper {{
-    color: {HE_TEXT_MUTED};
-    font-size: 0.9rem;
-    margin-top: 0.65rem;
-}}
-
-.he-chart-heading {{
-    color: {HE_BLACK};
-    font-size: 1rem;
-    font-weight: 800;
-    margin-bottom: 0.3rem;
-}}
-
-.he-chart-subheading {{
-    color: {HE_TEXT_MUTED};
-    font-size: 0.9rem;
-    margin-bottom: 0.55rem;
-}}
-
-.he-support-card {{
-    padding: 1rem 1rem 0.9rem;
-    margin-bottom: 0.7rem;
-}}
-
-.he-support-label {{
-    color: {HE_TEXT_MUTED};
-    font-size: 0.84rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-}}
-
-.he-support-value {{
-    color: {HE_BLACK};
-    font-size: 1.6rem;
-    font-weight: 800;
-    margin-top: 0.75rem;
-}}
-
-.he-support-note {{
-    color: {HE_TEXT_MUTED};
-    font-size: 0.9rem;
-    margin-top: 0.55rem;
-}}
-
+/* Päta */
 .he-footer {{
-    margin-top: 1.6rem;
+    margin-top: 30px;
     padding: 12px 18px;
     background: {HE_BLACK};
     color: #cfcfcf;
     font-size: 11px;
     border-top: 3px solid {HE_YELLOW};
+    box-shadow: inset 0 3px 0 {HE_GREEN};
     border-radius: 4px;
     text-align: center;
     letter-spacing: 0.5px;
 }}
-
-.he-footer b {{
-    color: {HE_YELLOW};
-}}
+.he-footer b {{ color: {HE_YELLOW}; }}
 </style>
 
 <div class="he-header">
     <svg class="he-logo-svg" viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg">
+        <!-- kotolňa silueta -->
         <rect x="4"  y="30" width="8" height="16" fill="{HE_YELLOW}"/>
         <rect x="14" y="22" width="8" height="24" fill="{HE_YELLOW}"/>
-        <rect x="24" y="12" width="8" height="34" fill="{HE_YELLOW}"/>
+        <rect x="24" y="12" width="8" height="34" fill="{HE_GREEN}"/>
         <rect x="34" y="24" width="8" height="22" fill="{HE_YELLOW}"/>
+        <!-- dym / para -->
         <circle cx="28" cy="8"  r="2"   fill="{HE_YELLOW}" opacity="0.7"/>
         <circle cx="32" cy="4"  r="1.5" fill="{HE_YELLOW}" opacity="0.5"/>
-        <circle cx="18" cy="18" r="1.5" fill="{HE_YELLOW}" opacity="0.6"/>
+        <circle cx="18" cy="18" r="1.5" fill="{HE_GREEN}" opacity="0.7"/>
     </svg>
     <div class="he-text-block">
         <div class="he-company">HANDLOVSKÁ ENERGETIKA<span class="he-company-suffix">s.r.o.</span></div>
@@ -971,7 +835,7 @@ day_dates = [today, today - datetime.timedelta(days=1), today - datetime.timedel
 
 render_section(
     "Výber obdobia",
-    "Vyber deň a hodinu, ktorú chceš porovnať. Horná časť dashboardu kopíruje rýchly prehľad z referenčného návrhu."
+    "Vyberte deň a hodinu, ktorú chcete porovnať."
 )
 
 st.markdown('<div class="he-control-label">Deň</div>', unsafe_allow_html=True)
@@ -983,8 +847,10 @@ sel_label = st.radio(
 )
 sel_date = day_dates[day_labels.index(sel_label)]
 
-now_h = min(datetime.datetime.now().hour + 1, 24)
+now_h = min(datetime.datetime.now().hour + 1, 24)   # aktuálna hodina (1-based)
 max_h = now_h if sel_date == today else 24
+
+# ── VÝBER HODINY (mriežka tlačidiel 12 × 2) ─────────────────────
 
 if st.session_state.get("last_sel_date") != sel_date:
     st.session_state.selected_hour = min(now_h, max_h)
@@ -1002,19 +868,22 @@ for r in range(2):
     cols = st.columns(12, gap="small")
     for c in range(12):
         h = r * 12 + c + 1
+        is_active   = (h == st.session_state.selected_hour)
+        is_disabled = h > max_h
         if cols[c].button(
             f"{h:02d}",
             key=f"hour_btn_{h}",
-            type="primary" if h == st.session_state.selected_hour else "secondary",
-            disabled=h > max_h,
+            type="primary" if is_active else "secondary",
+            disabled=is_disabled,
             use_container_width=True,
         ):
             st.session_state.selected_hour = h
             st.rerun()
 
-hour = st.session_state.selected_hour
+hour     = st.session_state.selected_hour
 hour_idx = hour - 1
 
+# ── NAČÍTANIE DÁT ───────────────────────────────────────────────
 cfg = PREVADZKA_SHEETS.get(sel_date.month)
 if cfg is None:
     st.error(f"Mesiac {sel_date.month} nie je nakonfigurovaný v PREVADZKA_SHEETS.")
@@ -1028,128 +897,108 @@ if df is None:
 
 vals = get_values(df, sel_date.day, hour_idx)
 prev_vals = get_values(df, sel_date.day, hour_idx - 1) if hour_idx > 0 else None
-day_df = get_day_df(df, sel_date.day, max_h)
-
 
 def tr(key: str, threshold: float) -> tuple[str, str]:
     if prev_vals is None:
         return ("", "")
     return get_trend(vals[key], prev_vals[key], threshold)
 
+st.caption(
+    f"Dátum: **{sel_date.strftime('%d.%m.%Y')}** | "
+    f"Hodina: **{hour}:00** | "
+    f"Dáta sú cachované na 5 min."
+)
+st.divider()
 
-prod_k6 = float(day_df["k6_vykon"].sum())
-prod_k7 = float(day_df["k7_vykon"].sum())
-active_hours_k6 = int((day_df["k6_vykon"] > 0).sum())
-active_hours_k7 = int((day_df["k7_vykon"] > 0).sum())
-total_output = vals["k6_vykon"] + vals["k7_vykon"]
+# ── VÝKON – GAUGES ──────────────────────────────────────────────
+gc6, gc7 = st.columns(2)
+with gc6:
+    _k6_on = vals["k6_vykon"] > 0.05
+    _k6_status_txt = "● V PREVÁDZKE" if _k6_on else "○ ODSTAVENÝ"
+    _k6_status_col = K6_COLOR if _k6_on else "#999"
+    st.markdown(f"""
+    <div style="background: linear-gradient(to right, rgba(40,160,40,0.16), rgba(40,160,40,0.02));
+                border-left: 6px solid {K6_COLOR};
+                padding: 11px 18px; margin-bottom: 10px; border-radius: 4px;
+                display: flex; align-items: center; justify-content: space-between;">
+        <div style="font-size: 20px; font-weight: 800; color: {K6_COLOR}; letter-spacing: 0.8px;">
+            KOTOL K6
+        </div>
+        <div style="font-size: 11px; color: {_k6_status_col}; font-weight: 700; letter-spacing: 0.6px;">
+            {_k6_status_txt}
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    st.plotly_chart(make_gauge(vals["k6_vykon"], "Výkon K6", K6_COLOR),
+                    width='stretch')
+    sym, col = tr("k6_vykon", 0.05)
+    if sym:
+        st.markdown(
+            f'<div style="text-align:center;font-size:28px;color:{col};margin-top:-10px;">{sym}</div>',
+            unsafe_allow_html=True)
 
-render_context_row([
-    ("Dátum", sel_date.strftime("%d.%m.%Y")),
-    ("Zvolená hodina", f"{hour:02d}:00"),
-    ("Dostupné dáta", f"01:00 – {max_h:02d}:00"),
-    ("Cache", "5 min"),
-])
+with gc7:
+    _k7_on = vals["k7_vykon"] > 0.05
+    _k7_status_txt = "● V PREVÁDZKE" if _k7_on else "○ ODSTAVENÝ"
+    _k7_status_col = K7_COLOR if _k7_on else "#999"
+    st.markdown(f"""
+    <div style="background: linear-gradient(to right, rgba(41,128,185,0.16), rgba(41,128,185,0.02));
+                border-left: 6px solid {K7_COLOR};
+                padding: 11px 18px; margin-bottom: 10px; border-radius: 4px;
+                display: flex; align-items: center; justify-content: space-between;">
+        <div style="font-size: 20px; font-weight: 800; color: {K7_COLOR}; letter-spacing: 0.8px;">
+            KOTOL K7
+        </div>
+        <div style="font-size: 11px; color: {_k7_status_col}; font-weight: 700; letter-spacing: 0.6px;">
+            {_k7_status_txt}
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    st.plotly_chart(make_gauge(vals["k7_vykon"], "Výkon K7", K7_COLOR),
+                    width='stretch')
+    sym, col = tr("k7_vykon", 0.05)
+    if sym:
+        st.markdown(
+            f'<div style="text-align:center;font-size:28px;color:{col};margin-top:-10px;">{sym}</div>',
+            unsafe_allow_html=True)
 
-hero_k6, hero_k7 = st.columns(2, gap="large")
-with hero_k6:
-    render_hero_card(
-        "Kotol K6",
-        vals["k6_vykon"],
-        "MW",
-        K6_COLOR,
-        f"Dnes spolu {format_value(prod_k6, 'MWh', 2)} · Prevádzka {active_hours_k6} h",
-        tr("k6_vykon", 0.05),
-    )
-with hero_k7:
-    render_hero_card(
-        "Kotol K7",
-        vals["k7_vykon"],
-        "MW",
-        K7_COLOR,
-        f"Dnes spolu {format_value(prod_k7, 'MWh', 2)} · Prevádzka {active_hours_k7} h",
-        tr("k7_vykon", 0.05),
-    )
+st.divider()
 
-stat_a, stat_b, stat_c = st.columns(3, gap="large")
-with stat_a:
-    render_stat_card(
-        "Celkový výkon",
-        total_output,
-        "MW",
-        HE_BLACK,
-        "Súčet výkonu oboch kotlov.",
-        decimals=2,
-        zero_as_dash=False,
-    )
-with stat_b:
-    render_stat_card(
-        "Výstupná teplota",
-        vals["vystup"],
-        "°C",
-        HE_ORANGE,
-        "Priemer aktívnych kotlov.",
-        tr("vystup", 0.5),
-    )
-with stat_c:
-    render_stat_card(
-        "Vratná teplota",
-        vals["vratna"],
-        "°C",
-        HE_PURPLE,
-        "Návratová voda do systému.",
-        tr("vratna", 0.5),
-    )
+# ── SPOLOČNÉ PARAMETRE ──────────────────────────────────────────
+p1, p2, p3 = st.columns(3)
+with p1:
+    mcard("Výstupná teplota", vals["vystup"], "°C", "#e67e22", tr("vystup", 0.5))
+with p2:
+    mcard("Vratná teplota", vals["vratna"], "°C", "#8e44ad", tr("vratna", 0.5))
+with p3:
+    mcard("Priemerný prietok", vals["prietok"], "m³/h", "#16a085", tr("prietok", 0.5))
 
-stat_d, stat_e, stat_f = st.columns(3, gap="large")
-with stat_d:
-    render_stat_card(
-        "Priemerný prietok",
-        vals["prietok"],
-        "m³/h",
-        HE_TEAL,
-        "Priemer prietoku bežiacich kotlov.",
-        tr("prietok", 0.5),
-    )
-with stat_e:
-    render_stat_card(
-        "Spaliny K6",
-        vals["k6_spaliny"],
-        "°C",
-        K6_COLOR,
-        "Aktuálna teplota spalín kotla K6.",
-        tr("k6_spaliny", 0.5),
-    )
-with stat_f:
-    render_stat_card(
-        "Spaliny K7",
-        vals["k7_spaliny"],
-        "°C",
-        K7_COLOR,
-        "Aktuálna teplota spalín kotla K7.",
-        tr("k7_spaliny", 0.5),
-    )
+# ── TEPLOTA SPALÍN ──────────────────────────────────────────────
+s1, s2 = st.columns(2)
+with s1:
+    mcard("Teplota spalín K6", vals["k6_spaliny"], "°C", K6_COLOR, tr("k6_spaliny", 0.5))
+with s2:
+    mcard("Teplota spalín K7", vals["k7_spaliny"], "°C", K7_COLOR, tr("k7_spaliny", 0.5))
 
+# ── DENNÝ TREND ─────────────────────────────────────────────────
 render_section(
-    "Denné trendy",
-    "Grafy sú zladené s novým dashboard štýlom a žlté zvýraznenie označuje práve zvolenú hodinu."
+    "Denný trend",
+    "Priebeh výkonu a teplôt za zvolený deň."
 )
 
-trend_left, trend_right = st.columns(2, gap="large")
-with trend_left:
-    st.markdown(
-        '<div class="he-chart-heading">Výkon kotlov počas dňa</div>'
-        '<div class="he-chart-subheading">Porovnanie K6 a K7 v MW.</div>',
-        unsafe_allow_html=True,
-    )
-    st.plotly_chart(make_vykon_chart(day_df, hour), use_container_width=True)
+day_df = get_day_df(df, sel_date.day, max_h)
 
-with trend_right:
-    st.markdown(
-        '<div class="he-chart-heading">Teploty a spaliny</div>'
-        '<div class="he-chart-subheading">Systémové teploty a spaliny v jednom prehľade.</div>',
-        unsafe_allow_html=True,
-    )
-    st.plotly_chart(make_teploty_chart(day_df, hour), use_container_width=True)
+t1, t2 = st.columns(2)
+with t1:
+    st.plotly_chart(make_vykon_chart(day_df), use_container_width=True)
+with t2:
+    st.plotly_chart(make_teploty_chart(day_df), use_container_width=True)
+
+# ── EXPORT CSV / PDF ────────────────────────────────────────────
+render_section(
+    "Reporty",
+    "Stiahnite si denný výkaz alebo obnovte dáta z databázy."
+)
 
 export_df = pd.DataFrame({
     "Hodina": day_df["hodina"],
@@ -1162,47 +1011,32 @@ export_df = pd.DataFrame({
     "Spaliny K7 (°C)": day_df["k7_spaliny"],
 })
 csv_str = export_df.to_csv(index=False, sep=";", decimal=",")
-pdf_bytes = generate_pdf(export_df, sel_date)
-
-render_section(
-    "Reporty a servis",
-    "Export zostal funkčný, len vizuálne zapadol do nového HE dashboardu."
-)
-
-dl_csv, dl_pdf, support = st.columns([1, 1, 0.7], gap="large")
-with dl_csv:
+dl1, dl2 = st.columns([1, 1])
+with dl1:
     st.download_button(
-        label="Stiahnuť denný report (CSV)",
+        label="💾 Stiahnuť denný report (CSV)",
         data=csv_str,
         file_name=f"kotolna_{sel_date.strftime('%Y-%m-%d')}.csv",
         mime="text/csv",
-        use_container_width=True,
     )
-with dl_pdf:
+with dl2:
+    pdf_bytes = generate_pdf(export_df, sel_date)
     st.download_button(
-        label="Stiahnuť denný report (PDF)",
+        label="💾 Stiahnuť denný report (PDF)",
         data=pdf_bytes,
         file_name=f"kotolna_{sel_date.strftime('%Y-%m-%d')}.pdf",
         mime="application/pdf",
-        use_container_width=True,
     )
-with support:
-    st.markdown(
-        f"""
-        <div class="he-support-card">
-            <div class="he-support-label">Dostupnosť dát</div>
-            <div class="he-support-value">{max_h}/24 h</div>
-            <div class="he-support-note">Pri dnešku sa zobrazujú len už dostupné merania.</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    if st.button("Obnoviť dáta", type="secondary", use_container_width=True):
-        st.cache_data.clear()
-        st.rerun()
 
+# ── REFRESH ─────────────────────────────────────────────────────
+st.markdown("")
+if st.button("♻️ Obnoviť dáta", type="secondary"):
+    st.cache_data.clear()
+    st.rerun()
+
+# ── PÄTA ────────────────────────────────────────────────────────
 st.markdown(f"""
 <div class="he-footer">
-    <b>HANDLOVSKÁ ENERGETIKA, s.r.o.</b> · Štrajková 1, 972 51 Handlová · IČO: 36 297 747
+    <b>HANDLOVSKÁ ENERGETIKA, s.r.o.</b> · Štrajková 1, 972 51 Handlová · IČO: 36 314 439
 </div>
 """, unsafe_allow_html=True)
