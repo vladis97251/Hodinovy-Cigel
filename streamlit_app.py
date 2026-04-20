@@ -234,12 +234,50 @@ def _find_dejavu_fonts() -> tuple[str | None, str | None]:
 
 
 def _strip_diacritics(s: str) -> str:
-    """Fallback pre Helvetica: odstráň diakritiku zo stringu."""
+    """Fallback pre Helvetica core font: nahraď non-Latin1 znaky ASCII
+    ekvivalentami, potom odstráň diakritiku. Safety net na konci mapuje
+    čokoľvek nepodporované na '?' aby fpdf2 nespadol.
+
+    Helvetica core font vie len Latin-1 (resp. WinAnsi). Znaky ako en-dash
+    '–', curly quotes, middle dot '·', ellipsis '…' Latin-1 nevie — musíme
+    ich ručne nahradiť skôr než odstránime diakritiku."""
     import unicodedata
-    return "".join(
+
+    # Non-Latin1 typografické znaky → ASCII ekvivalenty
+    replacements = {
+        "–": "-",    # en-dash U+2013
+        "—": "-",    # em-dash U+2014
+        "−": "-",    # minus sign U+2212
+        "…": "...",  # horizontal ellipsis U+2026
+        "\u00A0": " ",  # non-breaking space
+        "\u202F": " ",  # narrow no-break space
+        "\u2009": " ",  # thin space
+        "\u200B": "",   # zero-width space
+        "„": '"',    # SK dolné úvodzovky U+201E
+        "“": '"',    # left double quote U+201C
+        "”": '"',    # right double quote U+201D
+        "‘": "'",    # left single quote U+2018
+        "’": "'",    # right single quote U+2019
+        "‚": ",",    # single low quote U+201A
+        "«": '"',    # left guillemet
+        "»": '"',    # right guillemet
+        "•": "*",    # bullet U+2022
+        "→": "->",   # right arrow U+2192
+        "←": "<-",   # left arrow U+2190
+        "↑": "^",    # up arrow U+2191
+        "↓": "v",    # down arrow U+2193
+    }
+    for k, v in replacements.items():
+        s = s.replace(k, v)
+
+    # Odstráň diakritiku cez NFD dekompozíciu (ľ → l, š → s, á → a, ...)
+    s = "".join(
         c for c in unicodedata.normalize("NFD", s)
         if not unicodedata.combining(c)
     )
+
+    # Safety net: čokoľvek ešte mimo Latin-1 nahraď '?' aby fpdf nespadol
+    return "".join(c if ord(c) < 256 else "?" for c in s)
 
 
 def generate_pdf(export_df: pd.DataFrame, date: datetime.date) -> bytes:
@@ -835,7 +873,7 @@ day_dates = [today, today - datetime.timedelta(days=1), today - datetime.timedel
 
 render_section(
     "Výber obdobia",
-    "Vyberte deň a hodinu, ktorú chcete porovnať."
+    "Vyber deň a hodinu, ktorú chceš porovnať. Horná časť dashboardu kopíruje rýchly prehľad z referenčného návrhu."
 )
 
 st.markdown('<div class="he-control-label">Deň</div>', unsafe_allow_html=True)
@@ -996,8 +1034,8 @@ with t2:
 
 # ── EXPORT CSV / PDF ────────────────────────────────────────────
 render_section(
-    "Reporty",
-    "Stiahnite si denný výkaz alebo obnovte dáta z databázy."
+    "Reporty a servis",
+    "Stiahni denný výkaz alebo obnov dáta z Google Sheets."
 )
 
 export_df = pd.DataFrame({
