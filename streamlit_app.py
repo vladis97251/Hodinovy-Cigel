@@ -5,7 +5,14 @@ import pandas as pd
 import plotly.graph_objects as go
 from fpdf import FPDF
 
-st.set_page_config(page_title="Kotolňa K6 & K7", layout="wide")
+st.set_page_config(page_title="HE · Kotolňa K6 & K7", layout="wide", page_icon="🟡")
+
+# ── HE BRAND FARBY ──────────────────────────────────────────────
+HE_YELLOW = "#F0DC00"
+HE_GREEN  = "#28A028"
+HE_BLACK  = "#111111"
+K6_COLOR  = HE_GREEN       # kotol K6 – brand zelená
+K7_COLOR  = "#2980b9"      # kotol K7 – modrá (pre kontrast)
 
 # ── KONFIGURÁCIA ────────────────────────────────────────────────
 PREVADZKA_SHEETS = {
@@ -104,7 +111,7 @@ def get_trend(curr: float, prev: float, threshold: float) -> tuple[str, str]:
     if curr == 0.0 or prev == 0.0:
         return ("", "")
     if curr > prev + threshold:
-        return ("↑", "#27ae60")
+        return ("↑", HE_GREEN)
     if curr < prev - threshold:
         return ("↓", "#e74c3c")
     return ("→", "#aaa")
@@ -123,12 +130,12 @@ def make_vykon_chart(day_df: pd.DataFrame) -> go.Figure:
     fig = go.Figure()
     fig.add_trace(go.Scatter(
         x=day_df["hodina"], y=day_df["k6_vykon"],
-        name="K6", line=dict(color="#27ae60", width=2.5),
+        name="K6", line=dict(color=K6_COLOR, width=2.5),
         mode="lines+markers", marker=dict(size=5),
     ))
     fig.add_trace(go.Scatter(
         x=day_df["hodina"], y=day_df["k7_vykon"],
-        name="K7", line=dict(color="#2980b9", width=2.5),
+        name="K7", line=dict(color=K7_COLOR, width=2.5),
         mode="lines+markers", marker=dict(size=5),
     ))
     fig.update_layout(
@@ -158,12 +165,12 @@ def make_teploty_chart(day_df: pd.DataFrame) -> go.Figure:
     ))
     fig.add_trace(go.Scatter(
         x=day_df["hodina"], y=day_df["k6_spaliny"],
-        name="Spaliny K6", line=dict(color="#27ae60", width=1.5, dash="dot"),
+        name="Spaliny K6", line=dict(color=K6_COLOR, width=1.5, dash="dot"),
         mode="lines+markers", marker=dict(size=4), yaxis="y2",
     ))
     fig.add_trace(go.Scatter(
         x=day_df["hodina"], y=day_df["k7_spaliny"],
-        name="Spaliny K7", line=dict(color="#2980b9", width=1.5, dash="dot"),
+        name="Spaliny K7", line=dict(color=K7_COLOR, width=1.5, dash="dot"),
         mode="lines+markers", marker=dict(size=4), yaxis="y2",
     ))
     fig.update_layout(
@@ -233,7 +240,6 @@ def make_gauge(value: float, title: str, bar_color: str) -> go.Figure:
                 "ticktext": ["0", "0,5", "1,0", "1,5", "2,0", "2,5", "3,0", "3,5"],
                 "tickfont": {"size": 11},
                 "tickcolor": "#555",
-                
             },
             "bar": {"color": bar_color, "thickness": 0.28},
             "bgcolor": "white",
@@ -284,22 +290,101 @@ def mcard(label: str, value: float, unit: str, color: str,
 
 # ── STREAMLIT UI ────────────────────────────────────────────────
 
-st.markdown("""
+# Globálne štýly + HE brand hlavička
+st.markdown(f"""
 <style>
-.block-container { padding-top: 1rem; }
+.block-container {{ padding-top: 1rem; }}
 
+/* HE hlavička */
+.he-header {{
+    background: {HE_BLACK};
+    padding: 16px 22px;
+    border-bottom: 5px solid {HE_YELLOW};
+    border-radius: 6px;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}}
+.he-logo-svg {{ width: 52px; height: 52px; flex-shrink: 0; }}
+.he-text-block {{ display: flex; flex-direction: column; justify-content: center; }}
+.he-company {{
+    color: {HE_YELLOW};
+    font-size: 22px;
+    font-weight: 900;
+    letter-spacing: 0.5px;
+    line-height: 1.1;
+}}
+.he-company-suffix {{
+    color: #ffffff;
+    font-weight: 500;
+    font-size: 14px;
+    opacity: 0.85;
+    margin-left: 6px;
+}}
+.he-subtitle {{
+    color: #cfcfcf;
+    font-size: 11px;
+    margin-top: 4px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}}
+
+/* Aktívna hodina = HE žltá */
+div[data-testid="column"] button[kind="primary"] {{
+    background-color: {HE_YELLOW} !important;
+    color: {HE_BLACK} !important;
+    border-color: {HE_YELLOW} !important;
+    font-weight: 700 !important;
+}}
+div[data-testid="column"] button[kind="primary"]:hover {{
+    background-color: #d4c300 !important;
+    color: {HE_BLACK} !important;
+    border-color: #d4c300 !important;
+}}
 /* Kompaktnejšie tlačidlá v mriežke hodín */
 div[data-testid="column"] button[kind="secondary"],
-div[data-testid="column"] button[kind="primary"] {
+div[data-testid="column"] button[kind="primary"] {{
     padding: 0.25rem 0.1rem;
     font-size: 0.85rem;
     font-weight: 600;
     min-height: 2.1rem;
-}
-</style>
-""", unsafe_allow_html=True)
+}}
 
-st.title("Prevádzkové parametre kotlov K6 a K7")
+/* Päta */
+.he-footer {{
+    margin-top: 30px;
+    padding: 12px 18px;
+    background: {HE_BLACK};
+    color: #cfcfcf;
+    font-size: 11px;
+    border-top: 3px solid {HE_YELLOW};
+    border-radius: 4px;
+    text-align: center;
+    letter-spacing: 0.5px;
+}}
+.he-footer b {{ color: {HE_YELLOW}; }}
+</style>
+
+<div class="he-header">
+    <svg class="he-logo-svg" viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg">
+        <!-- kotolňa silueta -->
+        <rect x="4"  y="30" width="8" height="16" fill="{HE_YELLOW}"/>
+        <rect x="14" y="22" width="8" height="24" fill="{HE_YELLOW}"/>
+        <rect x="24" y="12" width="8" height="34" fill="{HE_YELLOW}"/>
+        <rect x="34" y="24" width="8" height="22" fill="{HE_YELLOW}"/>
+        <!-- dym / para -->
+        <circle cx="28" cy="8"  r="2"   fill="{HE_YELLOW}" opacity="0.7"/>
+        <circle cx="32" cy="4"  r="1.5" fill="{HE_YELLOW}" opacity="0.5"/>
+        <circle cx="18" cy="18" r="1.5" fill="{HE_YELLOW}" opacity="0.6"/>
+    </svg>
+    <div class="he-text-block">
+        <div class="he-company">HANDLOVSKÁ ENERGETIKA<span class="he-company-suffix">s.r.o.</span></div>
+        <div class="he-subtitle">Prevádzkové parametre · Kotolňa K6 & K7</div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
 today = datetime.date.today()
 day_labels = [
@@ -317,18 +402,16 @@ max_h = now_h if sel_date == today else 24
 
 # ── VÝBER HODINY (mriežka tlačidiel 12 × 2) ─────────────────────
 
-# Reset pri zmene dátumu
 if st.session_state.get("last_sel_date") != sel_date:
     st.session_state.selected_hour = min(now_h, max_h)
     st.session_state.last_sel_date = sel_date
 
-# Ochrana pred neplatnou hodnotou
 if st.session_state.get("selected_hour", 1) > max_h:
     st.session_state.selected_hour = max_h
 
 st.markdown(
     f"<div style='font-size:13px;color:#666;margin-bottom:6px;'>"
-    f"Hodina: <b style='color:#111;'>{st.session_state.selected_hour}:00</b></div>",
+    f"Hodina: <b style='color:{HE_BLACK};'>{st.session_state.selected_hour}:00</b></div>",
     unsafe_allow_html=True,
 )
 
@@ -349,7 +432,7 @@ for r in range(2):
             st.rerun()
 
 hour     = st.session_state.selected_hour
-hour_idx = hour - 1   # 0-based pre indexovanie
+hour_idx = hour - 1
 
 # ── NAČÍTANIE DÁT ───────────────────────────────────────────────
 cfg = PREVADZKA_SHEETS.get(sel_date.month)
@@ -381,9 +464,9 @@ st.divider()
 # ── VÝKON – GAUGES ──────────────────────────────────────────────
 gc6, gc7 = st.columns(2)
 with gc6:
-    st.markdown("<h3 style='text-align:center;color:#27ae60;'>Kotol K6</h3>",
+    st.markdown(f"<h3 style='text-align:center;color:{K6_COLOR};'>Kotol K6</h3>",
                 unsafe_allow_html=True)
-    st.plotly_chart(make_gauge(vals["k6_vykon"], "Výkon K6", "#27ae60"),
+    st.plotly_chart(make_gauge(vals["k6_vykon"], "Výkon K6", K6_COLOR),
                     width='stretch')
     sym, col = tr("k6_vykon", 0.05)
     if sym:
@@ -392,9 +475,9 @@ with gc6:
             unsafe_allow_html=True)
 
 with gc7:
-    st.markdown("<h3 style='text-align:center;color:#2980b9;'>Kotol K7</h3>",
+    st.markdown(f"<h3 style='text-align:center;color:{K7_COLOR};'>Kotol K7</h3>",
                 unsafe_allow_html=True)
-    st.plotly_chart(make_gauge(vals["k7_vykon"], "Výkon K7", "#2980b9"),
+    st.plotly_chart(make_gauge(vals["k7_vykon"], "Výkon K7", K7_COLOR),
                     width='stretch')
     sym, col = tr("k7_vykon", 0.05)
     if sym:
@@ -416,9 +499,9 @@ with p3:
 # ── TEPLOTA SPALÍN ──────────────────────────────────────────────
 s1, s2 = st.columns(2)
 with s1:
-    mcard("Teplota spalín K6", vals["k6_spaliny"], "°C", "#27ae60", tr("k6_spaliny", 0.5))
+    mcard("Teplota spalín K6", vals["k6_spaliny"], "°C", K6_COLOR, tr("k6_spaliny", 0.5))
 with s2:
-    mcard("Teplota spalín K7", vals["k7_spaliny"], "°C", "#2980b9", tr("k7_spaliny", 0.5))
+    mcard("Teplota spalín K7", vals["k7_spaliny"], "°C", K7_COLOR, tr("k7_spaliny", 0.5))
 
 # ── DENNÝ TREND ─────────────────────────────────────────────────
 st.divider()
@@ -467,3 +550,10 @@ st.markdown("")
 if st.button("Obnoviť dáta", type="secondary"):
     st.cache_data.clear()
     st.rerun()
+
+# ── PÄTA ────────────────────────────────────────────────────────
+st.markdown(f"""
+<div class="he-footer">
+    <b>HANDLOVSKÁ ENERGETIKA, s.r.o.</b> · Štrajková 1, 972 51 Handlová · IČO: 36 297 747
+</div>
+""", unsafe_allow_html=True)
