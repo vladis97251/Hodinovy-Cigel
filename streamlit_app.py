@@ -583,15 +583,33 @@ div[data-testid="column"] button[kind="primary"] {{
 """, unsafe_allow_html=True)
 
 today = datetime.date.today()
-day_labels = [
-    f"Dnes  ({today.strftime('%d.%m.%Y')})",
-    f"Včera  ({(today - datetime.timedelta(1)).strftime('%d.%m.%Y')})",
-    f"Predvčerom  ({(today - datetime.timedelta(2)).strftime('%d.%m.%Y')})",
-]
 day_dates = [today, today - datetime.timedelta(1), today - datetime.timedelta(2)]
+day_labels = [
+    f"Dnes · {today.strftime('%d.%m.%Y')}",
+    f"Včera · {(today - datetime.timedelta(1)).strftime('%d.%m.%Y')}",
+    f"Predvčerom · {(today - datetime.timedelta(2)).strftime('%d.%m.%Y')}",
+]
 
-sel_label = st.radio("Deň:", day_labels, horizontal=True)
-sel_date  = day_dates[day_labels.index(sel_label)]
+if "sel_day_idx" not in st.session_state:
+    st.session_state.sel_day_idx = 0
+
+st.markdown(
+    "<div style='font-size:13px;color:#666;margin-bottom:4px;font-weight:500;'>Deň:</div>",
+    unsafe_allow_html=True,
+)
+_day_cols = st.columns([1, 1, 1, 2])   # 3 pills + prázdny spacer vpravo
+for _i in range(3):
+    _active = (_i == st.session_state.sel_day_idx)
+    if _day_cols[_i].button(
+        day_labels[_i],
+        key=f"day_btn_{_i}",
+        type="primary" if _active else "secondary",
+        use_container_width=True,
+    ):
+        st.session_state.sel_day_idx = _i
+        st.rerun()
+
+sel_date = day_dates[st.session_state.sel_day_idx]
 
 now_h = datetime.datetime.now().hour + 1   # aktuálna hodina (1-based)
 max_h = now_h if sel_date == today else 24
@@ -660,8 +678,22 @@ st.divider()
 # ── VÝKON – GAUGES ──────────────────────────────────────────────
 gc6, gc7 = st.columns(2)
 with gc6:
-    st.markdown(f"<h3 style='text-align:center;color:{K6_COLOR};'>Kotol K6</h3>",
-                unsafe_allow_html=True)
+    _k6_on = vals["k6_vykon"] > 0.05
+    _k6_status_txt = "● V PREVÁDZKE" if _k6_on else "○ ODSTAVENÝ"
+    _k6_status_col = K6_COLOR if _k6_on else "#999"
+    st.markdown(f"""
+    <div style="background: linear-gradient(to right, rgba(40,160,40,0.16), rgba(40,160,40,0.02));
+                border-left: 6px solid {K6_COLOR};
+                padding: 11px 18px; margin-bottom: 10px; border-radius: 4px;
+                display: flex; align-items: center; justify-content: space-between;">
+        <div style="font-size: 20px; font-weight: 800; color: {K6_COLOR}; letter-spacing: 0.8px;">
+            KOTOL K6
+        </div>
+        <div style="font-size: 11px; color: {_k6_status_col}; font-weight: 700; letter-spacing: 0.6px;">
+            {_k6_status_txt}
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
     st.plotly_chart(make_gauge(vals["k6_vykon"], "Výkon K6", K6_COLOR),
                     width='stretch')
     sym, col = tr("k6_vykon", 0.05)
@@ -671,8 +703,22 @@ with gc6:
             unsafe_allow_html=True)
 
 with gc7:
-    st.markdown(f"<h3 style='text-align:center;color:{K7_COLOR};'>Kotol K7</h3>",
-                unsafe_allow_html=True)
+    _k7_on = vals["k7_vykon"] > 0.05
+    _k7_status_txt = "● V PREVÁDZKE" if _k7_on else "○ ODSTAVENÝ"
+    _k7_status_col = K7_COLOR if _k7_on else "#999"
+    st.markdown(f"""
+    <div style="background: linear-gradient(to right, rgba(41,128,185,0.16), rgba(41,128,185,0.02));
+                border-left: 6px solid {K7_COLOR};
+                padding: 11px 18px; margin-bottom: 10px; border-radius: 4px;
+                display: flex; align-items: center; justify-content: space-between;">
+        <div style="font-size: 20px; font-weight: 800; color: {K7_COLOR}; letter-spacing: 0.8px;">
+            KOTOL K7
+        </div>
+        <div style="font-size: 11px; color: {_k7_status_col}; font-weight: 700; letter-spacing: 0.6px;">
+            {_k7_status_txt}
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
     st.plotly_chart(make_gauge(vals["k7_vykon"], "Výkon K7", K7_COLOR),
                     width='stretch')
     sym, col = tr("k7_vykon", 0.05)
