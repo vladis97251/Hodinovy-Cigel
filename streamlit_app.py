@@ -194,7 +194,7 @@ def generate_pdf(export_df: pd.DataFrame, date: datetime.date) -> bytes:
     pdf.add_page()
 
     pdf.set_font("Helvetica", "B", 14)
-    pdf.cell(0, 8, f"Kotolna K6 & K7  –  {date.strftime('%d.%m.%Y')}", ln=True)
+    pdf.cell(0, 8, f"Kotolna K6 & K7 - {date.strftime('%d.%m.%Y')}", ln=True)
     pdf.ln(3)
 
     pdf.set_font("Helvetica", "B", 9)
