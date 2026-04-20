@@ -188,39 +188,235 @@ def make_teploty_chart(day_df: pd.DataFrame) -> go.Figure:
 
 
 def generate_pdf(export_df: pd.DataFrame, date: datetime.date) -> bytes:
-    # Hlavicky bez diakritiky (core PDF fonty nepodporuju vsetky sk znaky)
+    """Brandovany PDF report v HE style: zlta hlavicka, tmavy header tabulky,
+    cierny summary bar so zltou totalnou hodnotou. Core PDF fonty nepodporuju
+    vsetky SK znaky, preto bez diakritiky."""
+
+    # HE brand farby v RGB
+    HE_Y = (240, 220, 0)      # #F0DC00 – žltá
+    HE_K = (17, 17, 17)       # #111111 – čierna
+    HE_G = (40, 160, 40)      # #28A028 – zelená (K6 accent)
+    HE_MUTED = (110, 110, 110)
+    HE_ZEBRA = (248, 246, 230)  # veľmi jemná žltkastá pre striedavé riadky
+
+    class HEReportPDF(FPDF):
+        """FPDF s pevnou HE pätou, ktorá sa volá automaticky na každej stránke."""
+        def footer(self):
+            self.set_y(-14)
+            # Žltý tenký prúžok
+            self.set_fill_color(*HE_Y)
+            self.rect(10, self.get_y(), self.w - 20, 0.7, style="F")
+            self.set_y(-11)
+            self.set_x(10)
+            self.set_font("Helvetica", "", 8)
+            self.set_text_color(*HE_MUTED)
+            half = (self.w - 20) / 2
+            self.cell(half, 4,
+                      f"Vystavil: Hluchan   |   Vygenerovane: "
+                      f"{datetime.datetime.now().strftime('%d.%m.%Y %H:%M')}",
+                      align="L")
+            self.cell(half, 4,
+                      "HANDLOVSKA ENERGETIKA, s.r.o.  -  Strajkova 1, 972 51 Handlova  -  ICO: 36 297 747",
+                      align="R")
+
+    pdf = HEReportPDF(orientation="L", format="A4")
+    pdf.set_auto_page_break(auto=True, margin=16)
+    pdf.set_margins(10, 10, 10)
+    pdf.add_page()
+
+    # ─── ŽLTÁ HLAVIČKA (brand) ───────────────────────────────────
+    pdf.set_fill_color(*HE_Y)
+    pdf.rect(0, 0, pdf.w, 16, style="F")
+
+    # Logo text vľavo
+    pdf.set_xy(10, 3.5)
+    pdf.set_font("Helvetica", "B", 15)
+    pdf.set_text_color(*HE_K)
+    pdf.cell(120, 9, "HANDLOVSKA ENERGETIKA", ln=0)
+    pdf.set_font("Helvetica", "", 10)
+    pdf.set_xy(10, 8.5)
+    pdf.set_text_color(*HE_K)
+    pdf.cell(40, 5, "s.r.o.", ln=0)
+
+    # Adresa a IČO vpravo
+    pdf.set_xy(pdf.w - 90, 5)
+    pdf.set_font("Helvetica", "", 9)
+    pdf.set_text_color(*HE_K)
+    pdf.cell(80, 5, "Strajkova 1, 972 51 Handlova", align="R", ln=True)
+    pdf.set_xy(pdf.w - 90, 10)
+    pdf.cell(80, 4, "ICO: 36 297 747", align="R")
+
+    # Tenký čierny pruh pod žltou hlavičkou
+    pdf.set_fill_color(*HE_K)
+    pdf.rect(0, 16, pdf.w, 1.2, style="F")
+
+    # ─── TITULOK ─────────────────────────────────────────────────
+    pdf.set_xy(0, 22)
+    pdf.set_font("Helvetica", "B", 18)
+    pdf.set_text_color(*HE_K)
+    pdf.cell(pdf.w, 8, "DENNY VYKAZ - KOTOLNA K6 & K7", align="C", ln=True)
+
+    pdf.set_font("Helvetica", "", 9)
+    pdf.set_text_color(*HE_MUTED)
+    pdf.cell(pdf.w, 5, "PREVADZKOVE PARAMETRE", align="C", ln=True)
+
+    # ─── METADATA BLOK ───────────────────────────────────────────
+    pdf.ln(2)
+    pdf.set_x(10)
+    pdf.set_font("Helvetica", "B", 10)
+    pdf.set_text_color(*HE_K)
+    pdf.cell(28, 6, "Datum:", ln=0)
+    pdf.set_font("Helvetica", "", 10)
+    pdf.cell(55, 6, date.strftime("%d.%m.%Y"), ln=0)
+    pdf.set_font("Helvetica", "B", 10)
+    pdf.cell(28, 6, "Prevadzka:", ln=0)
+    pdf.set_font("Helvetica", "", 10)
+    pdf.cell(55, 6, "Handlova", ln=0)
+    pdf.set_font("Helvetica", "B", 10)
+    pdf.cell(32, 6, "Pocet hodin:", ln=0)
+    pdf.set_font("Helvetica", "", 10)
+    n_hours = len(export_df)
+    pdf.cell(40, 6, f"{n_hours} / 24", ln=True)
+
+    pdf.ln(2)
+
+    # ─── TABUĽKA ─────────────────────────────────────────────────
     headers = [
         "Hodina", "K6 Vykon (MW)", "K7 Vykon (MW)",
         "Vystupna (C)", "Vratna (C)", "Prietok (m3/h)",
         "Spaliny K6 (C)", "Spaliny K7 (C)",
     ]
-    col_w = [18, 30, 30, 28, 25, 30, 28, 28]
+    col_w = [20, 34, 34, 32, 28, 34, 32, 32]
+    total_w = sum(col_w)
+    start_x = (pdf.w - total_w) / 2  # centrovaná tabuľka
 
-    pdf = FPDF(orientation="L", format="A4")
-    pdf.set_margins(10, 10, 10)
-    pdf.add_page()
-
-    pdf.set_font("Helvetica", "B", 14)
-    pdf.cell(0, 8, f"Kotolna K6 & K7 - {date.strftime('%d.%m.%Y')}", ln=True)
-    pdf.ln(3)
-
+    # Dark header riadok so žltým textom
+    pdf.set_x(start_x)
+    pdf.set_fill_color(*HE_K)
+    pdf.set_text_color(*HE_Y)
     pdf.set_font("Helvetica", "B", 9)
-    pdf.set_fill_color(230, 230, 230)
     for i, h in enumerate(headers):
-        pdf.cell(col_w[i], 7, h, border=1, align="C", fill=True)
+        pdf.cell(col_w[i], 7, h, border=0, align="C", fill=True)
     pdf.ln()
 
+    # Riadky so zebra striping
+    pdf.set_text_color(*HE_K)
     pdf.set_font("Helvetica", "", 9)
-    for _, row in export_df.iterrows():
+    # Dynamická výška riadku podľa počtu hodín (aby sa zmestili všetky)
+    row_h_tbl = 5.0 if n_hours <= 20 else 4.5
+    for idx, (_, row) in enumerate(export_df.iterrows()):
+        pdf.set_x(start_x)
+        fill = (idx % 2 == 0)
+        if fill:
+            pdf.set_fill_color(*HE_ZEBRA)
         values = list(row)
         for i, val in enumerate(values):
             text = str(int(val)) if i == 0 else f"{val:.2f}".replace(".", ",")
-            pdf.cell(col_w[i], 6, text, border=1, align="C")
+            pdf.cell(col_w[i], row_h_tbl, text, border="B", align="C", fill=fill)
         pdf.ln()
+
+    # ─── SÚHRN ZA DEŇ ────────────────────────────────────────────
+    pdf.ln(3)
+
+    def safe_avg(series):
+        nz = series[series > 0]
+        return float(nz.mean()) if len(nz) > 0 else 0.0
+
+    def hours_running(series):
+        return int((series > 0).sum())
+
+    k6_ser = export_df["K6 Výkon (MW)"]
+    k7_ser = export_df["K7 Výkon (MW)"]
+
+    prod_k6 = float(k6_ser.sum())
+    prod_k7 = float(k7_ser.sum())
+    prod_total = prod_k6 + prod_k7
+    avg_k6 = safe_avg(k6_ser)
+    avg_k7 = safe_avg(k7_ser)
+    max_k6 = float(k6_ser.max())
+    max_k7 = float(k7_ser.max())
+    h_k6 = hours_running(k6_ser)
+    h_k7 = hours_running(k7_ser)
+
+    # Nadpis sekcie
+    pdf.set_x(10)
+    pdf.set_font("Helvetica", "B", 10)
+    pdf.set_text_color(*HE_K)
+    pdf.cell(0, 6, "SUHRN ZA DEN", ln=True)
+
+    col_lx = 10
+    col_rx = pdf.w / 2 + 5
+    row_h = 5.0
+
+    def sum_row(y, label, v_k6, v_k7, unit):
+        pdf.set_xy(col_lx, y)
+        pdf.set_font("Helvetica", "", 9)
+        pdf.set_text_color(*HE_MUTED)
+        pdf.cell(65, row_h, label, ln=0)
+        pdf.set_text_color(*HE_K)
+        pdf.set_font("Helvetica", "B", 9)
+        pdf.cell(40, row_h, f"{v_k6:.2f} {unit}".replace(".", ","), ln=0)
+
+        pdf.set_xy(col_rx, y)
+        pdf.set_font("Helvetica", "", 9)
+        pdf.set_text_color(*HE_MUTED)
+        pdf.cell(65, row_h, label, ln=0)
+        pdf.set_text_color(*HE_K)
+        pdf.set_font("Helvetica", "B", 9)
+        pdf.cell(40, row_h, f"{v_k7:.2f} {unit}".replace(".", ","), ln=True)
+
+    # Hlavičky stĺpcov K6 / K7
+    y = pdf.get_y()
+    pdf.set_xy(col_lx, y)
+    pdf.set_font("Helvetica", "B", 10)
+    pdf.set_text_color(*HE_G)
+    pdf.cell(105, row_h + 1, "Kotol K6", ln=0)
+    pdf.set_xy(col_rx, y)
+    pdf.set_text_color(41, 128, 185)  # K7 modrá
+    pdf.cell(105, row_h + 1, "Kotol K7", ln=True)
+
+    sum_row(pdf.get_y(), "Produkcia tepla:", prod_k6, prod_k7, "MWh")
+    sum_row(pdf.get_y(), "Priemerny vykon:", avg_k6, avg_k7, "MW")
+    sum_row(pdf.get_y(), "Maximalny vykon:", max_k6, max_k7, "MW")
+
+    # Hodiny v prevádzke (celé čísla)
+    y = pdf.get_y()
+    pdf.set_xy(col_lx, y)
+    pdf.set_font("Helvetica", "", 9)
+    pdf.set_text_color(*HE_MUTED)
+    pdf.cell(65, row_h, "Hodin v prevadzke:", ln=0)
+    pdf.set_text_color(*HE_K)
+    pdf.set_font("Helvetica", "B", 9)
+    pdf.cell(40, row_h, f"{h_k6} h", ln=0)
+    pdf.set_xy(col_rx, y)
+    pdf.set_font("Helvetica", "", 9)
+    pdf.set_text_color(*HE_MUTED)
+    pdf.cell(65, row_h, "Hodin v prevadzke:", ln=0)
+    pdf.set_text_color(*HE_K)
+    pdf.set_font("Helvetica", "B", 9)
+    pdf.cell(40, row_h, f"{h_k7} h", ln=True)
+
+    # ─── VEĽKÝ SUMMARY BAR ──────────────────────────────────────
+    pdf.ln(2)
+    bar_y = pdf.get_y()
+    bar_h = 11
+    pdf.set_fill_color(*HE_K)
+    pdf.rect(10, bar_y, pdf.w - 20, bar_h, style="F")
+
+    pdf.set_xy(14, bar_y + 2)
+    pdf.set_font("Helvetica", "B", 12)
+    pdf.set_text_color(255, 255, 255)
+    pdf.cell(120, 7, "PRODUKCIA TEPLA SPOLU:", ln=0)
+
+    pdf.set_xy(pdf.w - 14 - 100, bar_y + 1.5)
+    pdf.set_font("Helvetica", "B", 15)
+    pdf.set_text_color(*HE_Y)
+    pdf.cell(100, 8, f"{prod_total:.2f} MWh".replace(".", ","), ln=0, align="R")
 
     buf = io.BytesIO()
     pdf.output(buf)
     return buf.getvalue()
+
 
 
 def make_gauge(value: float, title: str, bar_color: str) -> go.Figure:
