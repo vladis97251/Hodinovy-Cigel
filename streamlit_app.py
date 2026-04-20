@@ -108,6 +108,75 @@ def get_trend(curr: float, prev: float, threshold: float) -> tuple[str, str]:
     return ("→", "#aaa")
 
 
+def get_day_df(df: pd.DataFrame, den: int, max_hour: int) -> pd.DataFrame:
+    rows = []
+    for h in range(max_hour):
+        v = get_values(df, den, h)
+        v["hodina"] = h + 1
+        rows.append(v)
+    return pd.DataFrame(rows)
+
+
+def make_vykon_chart(day_df: pd.DataFrame) -> go.Figure:
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=day_df["hodina"], y=day_df["k6_vykon"],
+        name="K6", line=dict(color="#27ae60", width=2.5),
+        mode="lines+markers", marker=dict(size=5),
+    ))
+    fig.add_trace(go.Scatter(
+        x=day_df["hodina"], y=day_df["k7_vykon"],
+        name="K7", line=dict(color="#2980b9", width=2.5),
+        mode="lines+markers", marker=dict(size=5),
+    ))
+    fig.update_layout(
+        title=dict(text="Výkon kotlov (MW)", font=dict(size=15)),
+        xaxis=dict(title="Hodina", tickmode="linear", tick0=1, dtick=1, gridcolor="#eee"),
+        yaxis=dict(title="MW", range=[0, 3.5], gridcolor="#eee"),
+        height=320,
+        margin=dict(t=50, b=40, l=50, r=20),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="#fafafa",
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+    )
+    return fig
+
+
+def make_teploty_chart(day_df: pd.DataFrame) -> go.Figure:
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=day_df["hodina"], y=day_df["vystup"],
+        name="Výstupná", line=dict(color="#e67e22", width=2),
+        mode="lines+markers", marker=dict(size=5),
+    ))
+    fig.add_trace(go.Scatter(
+        x=day_df["hodina"], y=day_df["vratna"],
+        name="Vratná", line=dict(color="#8e44ad", width=2),
+        mode="lines+markers", marker=dict(size=5),
+    ))
+    fig.add_trace(go.Scatter(
+        x=day_df["hodina"], y=day_df["k6_spaliny"],
+        name="Spaliny K6", line=dict(color="#27ae60", width=1.5, dash="dot"),
+        mode="lines+markers", marker=dict(size=4),
+    ))
+    fig.add_trace(go.Scatter(
+        x=day_df["hodina"], y=day_df["k7_spaliny"],
+        name="Spaliny K7", line=dict(color="#2980b9", width=1.5, dash="dot"),
+        mode="lines+markers", marker=dict(size=4),
+    ))
+    fig.update_layout(
+        title=dict(text="Teploty (°C)", font=dict(size=15)),
+        xaxis=dict(title="Hodina", tickmode="linear", tick0=1, dtick=1, gridcolor="#eee"),
+        yaxis=dict(title="°C", gridcolor="#eee"),
+        height=320,
+        margin=dict(t=50, b=40, l=50, r=20),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="#fafafa",
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+    )
+    return fig
+
+
 def make_gauge(value: float, title: str, bar_color: str) -> go.Figure:
     fig = go.Figure(go.Indicator(
         mode="gauge+number",
@@ -263,6 +332,38 @@ with s1:
     mcard("Teplota spalín K6", vals["k6_spaliny"], "°C", "#27ae60", tr("k6_spaliny", 0.5))
 with s2:
     mcard("Teplota spalín K7", vals["k7_spaliny"], "°C", "#2980b9", tr("k7_spaliny", 0.5))
+
+# ── DENNÝ TREND ─────────────────────────────────────────────────
+st.divider()
+st.subheader("Denný trend")
+
+day_df = get_day_df(df, sel_date.day, max_h)
+
+t1, t2 = st.columns(2)
+with t1:
+    st.plotly_chart(make_vykon_chart(day_df), use_container_width=True)
+with t2:
+    st.plotly_chart(make_teploty_chart(day_df), use_container_width=True)
+
+# ── EXPORT CSV ──────────────────────────────────────────────────
+st.divider()
+export_df = pd.DataFrame({
+    "Hodina": day_df["hodina"],
+    "K6 Výkon (MW)": day_df["k6_vykon"],
+    "K7 Výkon (MW)": day_df["k7_vykon"],
+    "Výstupná teplota (°C)": day_df["vystup"],
+    "Vratná teplota (°C)": day_df["vratna"],
+    "Prietok (m³/h)": day_df["prietok"],
+    "Spaliny K6 (°C)": day_df["k6_spaliny"],
+    "Spaliny K7 (°C)": day_df["k7_spaliny"],
+})
+csv_str = export_df.to_csv(index=False, sep=";", decimal=",")
+st.download_button(
+    label="⬇ Stiahnuť denný report (CSV)",
+    data=csv_str,
+    file_name=f"kotolna_{sel_date.strftime('%Y-%m-%d')}.csv",
+    mime="text/csv",
+)
 
 # ── REFRESH ─────────────────────────────────────────────────────
 st.markdown("")
