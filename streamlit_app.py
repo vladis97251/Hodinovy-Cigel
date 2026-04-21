@@ -17,6 +17,9 @@ HE_SURFACE = "#FFFDF8"
 HE_SURFACE_ALT = "#F6F1E5"
 HE_BORDER = "#D7CDB3"
 HE_TEXT_MUTED = "#676050"
+HE_ORANGE = "#D97A1F"
+HE_PURPLE = "#7257A8"
+HE_TEAL   = "#1D8B76"
 
 # ── KONFIGURÁCIA ────────────────────────────────────────────────
 PREVADZKA_SHEETS = {
@@ -234,50 +237,12 @@ def _find_dejavu_fonts() -> tuple[str | None, str | None]:
 
 
 def _strip_diacritics(s: str) -> str:
-    """Fallback pre Helvetica core font: nahraď non-Latin1 znaky ASCII
-    ekvivalentami, potom odstráň diakritiku. Safety net na konci mapuje
-    čokoľvek nepodporované na '?' aby fpdf2 nespadol.
-
-    Helvetica core font vie len Latin-1 (resp. WinAnsi). Znaky ako en-dash
-    '–', curly quotes, middle dot '·', ellipsis '…' Latin-1 nevie — musíme
-    ich ručne nahradiť skôr než odstránime diakritiku."""
+    """Fallback pre Helvetica: odstráň diakritiku zo stringu."""
     import unicodedata
-
-    # Non-Latin1 typografické znaky → ASCII ekvivalenty
-    replacements = {
-        "–": "-",    # en-dash U+2013
-        "—": "-",    # em-dash U+2014
-        "−": "-",    # minus sign U+2212
-        "…": "...",  # horizontal ellipsis U+2026
-        "\u00A0": " ",  # non-breaking space
-        "\u202F": " ",  # narrow no-break space
-        "\u2009": " ",  # thin space
-        "\u200B": "",   # zero-width space
-        "„": '"',    # SK dolné úvodzovky U+201E
-        "“": '"',    # left double quote U+201C
-        "”": '"',    # right double quote U+201D
-        "‘": "'",    # left single quote U+2018
-        "’": "'",    # right single quote U+2019
-        "‚": ",",    # single low quote U+201A
-        "«": '"',    # left guillemet
-        "»": '"',    # right guillemet
-        "•": "*",    # bullet U+2022
-        "→": "->",   # right arrow U+2192
-        "←": "<-",   # left arrow U+2190
-        "↑": "^",    # up arrow U+2191
-        "↓": "v",    # down arrow U+2193
-    }
-    for k, v in replacements.items():
-        s = s.replace(k, v)
-
-    # Odstráň diakritiku cez NFD dekompozíciu (ľ → l, š → s, á → a, ...)
-    s = "".join(
+    return "".join(
         c for c in unicodedata.normalize("NFD", s)
         if not unicodedata.combining(c)
     )
-
-    # Safety net: čokoľvek ešte mimo Latin-1 nahraď '?' aby fpdf nespadol
-    return "".join(c if ord(c) < 256 else "?" for c in s)
 
 
 def generate_pdf(export_df: pd.DataFrame, date: datetime.date) -> bytes:
@@ -608,6 +573,41 @@ def render_section(title: str, subtitle: str) -> None:
     )
 
 
+def format_value(value: float, unit: str = "", decimals: int = 2,
+                 zero_as_dash: bool = False) -> str:
+    if zero_as_dash and value == 0.0:
+        return "—"
+    rendered = f"{value:.{decimals}f}".replace(".", ",")
+    return f"{rendered} {unit}".strip()
+
+
+def trend_badge(trend: tuple[str, str] | None) -> str:
+    if not trend or not trend[0]:
+        return "<span></span>"
+    return (
+        f'<span style="font-size:20px;color:{trend[1]};'
+        f'font-weight:700;line-height:1;">{trend[0]}</span>'
+    )
+
+
+def render_stat_card(label: str, value: float, unit: str, color: str,
+                     helper: str, trend: tuple[str, str] | None = None,
+                     decimals: int = 1, zero_as_dash: bool = True) -> None:
+    st.markdown(
+        f"""
+        <div class="he-stat-card" style="border-top: 4px solid {color};">
+            <div class="he-stat-top">
+                <div class="he-stat-label">{label}</div>
+                {trend_badge(trend)}
+            </div>
+            <div class="he-stat-value">{format_value(value, unit, decimals, zero_as_dash)}</div>
+            <div class="he-stat-helper">{helper}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def mcard(label: str, value: float, unit: str, color: str,
           trend: tuple[str, str] | None = None) -> None:
     if value == 0.0:
@@ -778,11 +778,11 @@ div[role="radiogroup"] label[data-baseweb="radio"]:hover p {{
     color: {HE_GREEN};
 }}
 div[role="radiogroup"] label[data-baseweb="radio"][aria-checked="true"] {{
-    background: {HE_BLACK};
-    border-color: {HE_BLACK};
+    background: {HE_YELLOW};
+    border-color: {HE_YELLOW};
 }}
 div[role="radiogroup"] label[data-baseweb="radio"][aria-checked="true"] p {{
-    color: white;
+    color: {HE_BLACK};
 }}
 
 /* Tlačidlá všeobecne (hodinový grid) */
@@ -826,6 +826,58 @@ div[data-testid="stDownloadButton"] button {{
 div[data-testid="stDownloadButton"] button:hover {{
     border-color: {HE_GREEN};
     color: {HE_GREEN};
+}}
+
+/* Stat karty (CELKOVÝ VÝKON / VÝSTUPNÁ / VRATNÁ / PRIETOK / SPALINY K6 / K7) */
+.he-stat-card {{
+    background: {HE_SURFACE};
+    border: 1px solid {HE_BORDER};
+    border-radius: var(--he-radius-lg);
+    box-shadow: var(--he-shadow);
+    padding: 0.95rem 1rem;
+    min-height: 142px;
+    margin-bottom: 0.9rem;
+}}
+.he-stat-top {{
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.8rem;
+}}
+.he-stat-label {{
+    color: {HE_TEXT_MUTED};
+    font-size: 0.84rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+}}
+.he-stat-value {{
+    color: {HE_BLACK};
+    font-size: 1.72rem;
+    font-weight: 800;
+    margin-top: 0.95rem;
+    line-height: 1.1;
+}}
+.he-stat-helper {{
+    color: {HE_TEXT_MUTED};
+    font-size: 0.9rem;
+    margin-top: 0.65rem;
+}}
+.he-trend-badge,
+.he-trend-note {{
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    padding: 0.28rem 0.6rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    white-space: nowrap;
+}}
+.he-trend-note {{
+    background: {HE_SURFACE_ALT};
+    color: {HE_TEXT_MUTED};
+    border: 1px solid {HE_BORDER};
 }}
 
 /* Päta */
@@ -873,7 +925,7 @@ day_dates = [today, today - datetime.timedelta(days=1), today - datetime.timedel
 
 render_section(
     "Výber obdobia",
-    "Vyber deň a hodinu, ktorú chceš porovnať. Horná časť dashboardu kopíruje rýchly prehľad z referenčného návrhu."
+    "Vyberte deň a hodinu, ktorú chcete porovnať."
 )
 
 st.markdown('<div class="he-control-label">Deň</div>', unsafe_allow_html=True)
@@ -1002,21 +1054,67 @@ with gc7:
 
 st.divider()
 
-# ── SPOLOČNÉ PARAMETRE ──────────────────────────────────────────
-p1, p2, p3 = st.columns(3)
-with p1:
-    mcard("Výstupná teplota", vals["vystup"], "°C", "#e67e22", tr("vystup", 0.5))
-with p2:
-    mcard("Vratná teplota", vals["vratna"], "°C", "#8e44ad", tr("vratna", 0.5))
-with p3:
-    mcard("Priemerný prietok", vals["prietok"], "m³/h", "#16a085", tr("prietok", 0.5))
+# ── PREHĽADOVÉ KARTY (3 × 2 mriežka) ────────────────────────────
+total_output = vals["k6_vykon"] + vals["k7_vykon"]
 
-# ── TEPLOTA SPALÍN ──────────────────────────────────────────────
-s1, s2 = st.columns(2)
-with s1:
-    mcard("Teplota spalín K6", vals["k6_spaliny"], "°C", K6_COLOR, tr("k6_spaliny", 0.5))
-with s2:
-    mcard("Teplota spalín K7", vals["k7_spaliny"], "°C", K7_COLOR, tr("k7_spaliny", 0.5))
+stat_a, stat_b, stat_c = st.columns(3, gap="large")
+with stat_a:
+    render_stat_card(
+        "Celkový výkon",
+        total_output,
+        "MW",
+        HE_BLACK,
+        "Súčet výkonu oboch kotlov.",
+        decimals=2,
+        zero_as_dash=False,
+    )
+with stat_b:
+    render_stat_card(
+        "Výstupná teplota",
+        vals["vystup"],
+        "°C",
+        HE_ORANGE,
+        "Priemer aktívnych kotlov.",
+        tr("vystup", 0.5),
+    )
+with stat_c:
+    render_stat_card(
+        "Vratná teplota",
+        vals["vratna"],
+        "°C",
+        HE_PURPLE,
+        "Návratová voda do systému.",
+        tr("vratna", 0.5),
+    )
+
+stat_d, stat_e, stat_f = st.columns(3, gap="large")
+with stat_d:
+    render_stat_card(
+        "Priemerný prietok",
+        vals["prietok"],
+        "m³/h",
+        HE_TEAL,
+        "Priemer prietoku bežiacich kotlov.",
+        tr("prietok", 0.5),
+    )
+with stat_e:
+    render_stat_card(
+        "Spaliny K6",
+        vals["k6_spaliny"],
+        "°C",
+        K6_COLOR,
+        "Aktuálna teplota spalín kotla K6.",
+        tr("k6_spaliny", 0.5),
+    )
+with stat_f:
+    render_stat_card(
+        "Spaliny K7",
+        vals["k7_spaliny"],
+        "°C",
+        K7_COLOR,
+        "Aktuálna teplota spalín kotla K7.",
+        tr("k7_spaliny", 0.5),
+    )
 
 # ── DENNÝ TREND ─────────────────────────────────────────────────
 render_section(
@@ -1034,8 +1132,8 @@ with t2:
 
 # ── EXPORT CSV / PDF ────────────────────────────────────────────
 render_section(
-    "Reporty a servis",
-    "Stiahni denný výkaz alebo obnov dáta z Google Sheets."
+    "Reporty",
+    "Stiahnite si denný výkaz alebo obnovte dáta z databázy."
 )
 
 export_df = pd.DataFrame({
