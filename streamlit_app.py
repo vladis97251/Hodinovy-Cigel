@@ -278,7 +278,7 @@ def generate_pdf(export_df: pd.DataFrame, date: datetime.date) -> bytes:
 
     class HEReportPDF(FPDF):
         def footer(self):
-            self.set_y(-12.5)
+            self.set_y(-13.8)
             self.set_draw_color(*HE_LINE)
             self.set_line_width(0.2)
             self.line(10, self.get_y(), self.w - 10, self.get_y())
@@ -288,8 +288,8 @@ def generate_pdf(export_df: pd.DataFrame, date: datetime.date) -> bytes:
             self.set_fill_color(*HE_G)
             self.rect(10, self.h - 6.5, self.w - 20, 0.5, style="F")
 
-            self.set_y(-10.0)
-            self.set_font(font_family, "", 7.5)
+            self.set_y(-11.8)
+            self.set_font(font_family, "B", 8.0)
             self.set_text_color(*HE_MUTED)
             self.cell(
                 self.w - 40,
@@ -300,7 +300,7 @@ def generate_pdf(export_df: pd.DataFrame, date: datetime.date) -> bytes:
                 ),
                 align="L",
             )
-            self.set_xy(self.w - 30, self.h - 10.0)
+            self.set_xy(self.w - 30, self.h - 11.8)
             self.cell(20, 4, txt(f"Strana {self.page_no()}"), align="R")
 
     pdf = HEReportPDF(orientation="L", format="A4")
@@ -389,7 +389,7 @@ def generate_pdf(export_df: pd.DataFrame, date: datetime.date) -> bytes:
     chips = [
         ("Dátum", date.strftime("%d.%m.%Y"), HE_G),
         ("Prevádzka", "Cigeľ", K7_ACCENT),
-        ("Pokrytie dát", f"{n_hours}/24 hodín", HE_Y),
+        ("Prevádzka v hodinách", f"{n_hours}/24 hodín", HE_Y),
     ]
     for idx, (label, value, accent) in enumerate(chips):
         x = 10 + idx * (chip_w + chip_gap)
@@ -598,7 +598,7 @@ def generate_pdf(export_df: pd.DataFrame, date: datetime.date) -> bytes:
         HE_G,
         K6_SOFT,
         [
-            ("Produkcia tepla", f"{fmt_num(prod_k6)} MWh"),
+            ("Výroba tepla", f"{fmt_num(prod_k6)} MWh"),
             ("Priemerný výkon", f"{fmt_num(avg_k6)} MW"),
             ("Maximálny výkon", f"{fmt_num(max_k6)} MW"),
             ("Hodín v prevádzke", f"{h_k6} h"),
@@ -610,7 +610,7 @@ def generate_pdf(export_df: pd.DataFrame, date: datetime.date) -> bytes:
         K7_ACCENT,
         K7_SOFT,
         [
-            ("Produkcia tepla", f"{fmt_num(prod_k7)} MWh"),
+            ("Výroba tepla", f"{fmt_num(prod_k7)} MWh"),
             ("Priemerný výkon", f"{fmt_num(avg_k7)} MW"),
             ("Maximálny výkon", f"{fmt_num(max_k7)} MW"),
             ("Hodín v prevádzke", f"{h_k7} h"),
@@ -629,7 +629,7 @@ def generate_pdf(export_df: pd.DataFrame, date: datetime.date) -> bytes:
     pdf.set_xy(16, bar_y + bar_title_y)
     pdf.set_font(font_family, "B", bar_title_font)
     pdf.set_text_color(255, 255, 255)
-    pdf.cell(130, 6.0, txt("CELKOVÁ PRODUKCIA TEPLA"), ln=0)
+    pdf.cell(130, 6.0, txt("CELKOVÁ VÝROBA TEPLA"), ln=0)
 
     pdf.set_xy(pdf.w - 112, bar_y + bar_total_y)
     pdf.set_font(font_family, "B", bar_total_font)
