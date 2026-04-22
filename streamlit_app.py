@@ -50,10 +50,10 @@ DZ_K6_PRIETOK = 14   # O  – Prietok K6 (m³/h)
 DZ_K7_PRIETOK = 31   # AF – Prietok K7 (m³/h)
 DZ_K6_VYSTUP  = 2    # C  – Výstupná teplota K6 (°C)
 DZ_K6_VRATNA  = 3    # D  – Vratná teplota K6 (°C)
-DZ_K6_SPALINY = 5    # F  – Teplota spalín K6 (°C)
+DZ_K6_SPALINY = 5    # F  – Teplota spaľ. komory K6 (°C)
 DZ_K7_VYSTUP  = 19   # T  – Výstupná teplota K7 (°C)
 DZ_K7_VRATNA  = 20   # U  – Vratná teplota K7 (°C)
-DZ_K7_SPALINY = 22   # W  – Teplota spalín K7 (°C)
+DZ_K7_SPALINY = 22   # W  – Teplota spaľ. komory K7 (°C)
 
 
 # ── POMOCNÉ FUNKCIE ─────────────────────────────────────────────
@@ -179,19 +179,19 @@ def make_teploty_chart(day_df: pd.DataFrame) -> go.Figure:
     ))
     fig.add_trace(go.Scatter(
         x=day_df["hodina"], y=day_df["k6_spaliny"],
-        name="Spaliny K6", line=dict(color=K6_COLOR, width=1.5, dash="dot"),
+        name="Teplota spaľ. komory K6", line=dict(color=K6_COLOR, width=1.5, dash="dot"),
         mode="lines+markers", marker=dict(size=4), yaxis="y2",
     ))
     fig.add_trace(go.Scatter(
         x=day_df["hodina"], y=day_df["k7_spaliny"],
-        name="Spaliny K7", line=dict(color=K7_COLOR, width=1.5, dash="dot"),
+        name="Teplota spaľ. komory K7", line=dict(color=K7_COLOR, width=1.5, dash="dot"),
         mode="lines+markers", marker=dict(size=4), yaxis="y2",
     ))
     fig.update_layout(
         title=dict(text="Teploty (°C)", font=dict(size=15)),
         xaxis=dict(title="Hodina", tickmode="linear", tick0=1, dtick=1, gridcolor="#eee"),
         yaxis=dict(title="Výst./Vratn. (°C)", gridcolor="#eee", side="left"),
-        yaxis2=dict(title="Spaliny (°C)", overlaying="y", side="right", showgrid=False),
+        yaxis2=dict(title="Teplota spaľ. komory (°C)", overlaying="y", side="right", showgrid=False),
         height=320,
         margin=dict(t=50, b=40, l=50, r=60),
         paper_bgcolor="rgba(0,0,0,0)",
@@ -418,7 +418,7 @@ def generate_pdf(export_df: pd.DataFrame, date: datetime.date) -> bytes:
     headers = [
         "Hod", "K6 MW", "K7 MW",
         "Výstup (°C)", "Vratná (°C)", "Prietok (m³/h)",
-        "Spaliny K6 (°C)", "Spaliny K7 (°C)",
+        "Teplota spaľ. komory K6 (°C)", "Teplota spaľ. komory K7 (°C)",
     ]
     col_w = [18, 31, 31, 31, 31, 36, 49, 50]  # total 277 mm
     start_x = 10
@@ -970,7 +970,7 @@ div[data-testid="stDownloadButton"] button:hover {{
     color: {HE_BLACK};
 }}
 
-/* Stat karty (CELKOVÝ VÝKON / VÝSTUPNÁ / VRATNÁ / PRIETOK / SPALINY K6 / K7) */
+/* Stat karty (CELKOVÝ VÝKON / VÝSTUPNÁ / VRATNÁ / PRIETOK / TEPLOTA SPAĽ. KOMORY K6 / K7) */
 .he-stat-card {{
     background: {HE_SURFACE};
     border: 1px solid {HE_BORDER};
@@ -1262,7 +1262,7 @@ with stat_d:
     )
 with stat_e:
     render_stat_card(
-        "Spaliny K6",
+        "Teplota spaľ. komory K6",
         vals["k6_spaliny"],
         "°C",
         K6_COLOR,
@@ -1271,7 +1271,7 @@ with stat_e:
     )
 with stat_f:
     render_stat_card(
-        "Spaliny K7",
+        "Teplota spaľ. komory K7",
         vals["k7_spaliny"],
         "°C",
         K7_COLOR,
@@ -1306,8 +1306,8 @@ export_df = pd.DataFrame({
     "Výstupná teplota (°C)": day_df["vystup"],
     "Vratná teplota (°C)": day_df["vratna"],
     "Prietok (m³/h)": day_df["prietok"],
-    "Spaliny K6 (°C)": day_df["k6_spaliny"],
-    "Spaliny K7 (°C)": day_df["k7_spaliny"],
+    "Teplota spaľ. komory K6 (°C)": day_df["k6_spaliny"],
+    "Teplota spaľ. komory K7 (°C)": day_df["k7_spaliny"],
 })
 csv_str = export_df.to_csv(index=False, sep=";", decimal=",")
 dl1, dl2 = st.columns([1, 1])
