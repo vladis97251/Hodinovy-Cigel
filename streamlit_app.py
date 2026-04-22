@@ -19,7 +19,7 @@ HE_YELLOW = "#F0DC00"
 HE_GREEN  = "#28A028"
 HE_BLACK  = "#111111"
 K6_COLOR  = HE_GREEN       # kotol K6 – brand zelená
-K7_COLOR  = "#2980b9"      # kotol K7 – modrá (pre kontrast)
+K7_COLOR  = HE_YELLOW      # kotol K7 – firemná žltá
 HE_SURFACE = "#FFFDF8"
 HE_SURFACE_ALT = "#F6F1E5"
 HE_BORDER = "#D7CDB3"
@@ -776,8 +776,9 @@ st.markdown(f"""
 
 .stApp {{
     background:
-        radial-gradient(circle at top left, rgba(240, 220, 0, 0.28), rgba(240, 220, 0, 0) 28%),
-        linear-gradient(180deg, #f5efe2 0%, #ece5d5 100%);
+        radial-gradient(circle at top left, rgba(240, 220, 0, 0.22), rgba(240, 220, 0, 0) 30%),
+        radial-gradient(circle at top right, rgba(40, 160, 40, 0.13), rgba(40, 160, 40, 0) 34%),
+        linear-gradient(180deg, #f5f1e4 0%, #e9ebdd 100%);
 }}
 
 [data-testid="stHeader"],
@@ -951,6 +952,22 @@ div[data-testid="stDownloadButton"] button {{
 div[data-testid="stDownloadButton"] button:hover {{
     border-color: {HE_GREEN};
     color: {HE_GREEN};
+}}
+
+/* Obnoviť dáta - rovnaký vzhľad ako ostatné tlačidlá */
+.st-key-refresh_data_btn div[data-testid="stButton"] > button {{
+    width: 100%;
+    background: {HE_SURFACE};
+    border: 1px solid {HE_BORDER};
+    color: {HE_BLACK};
+    border-radius: 14px;
+    min-height: 3.1rem;
+    font-weight: 700;
+    box-shadow: var(--he-shadow);
+}}
+.st-key-refresh_data_btn div[data-testid="stButton"] > button:hover {{
+    border-color: {HE_BLACK};
+    color: {HE_BLACK};
 }}
 
 /* Stat karty (CELKOVÝ VÝKON / VÝSTUPNÁ / VRATNÁ / PRIETOK / SPALINY K6 / K7) */
@@ -1171,9 +1188,9 @@ with gc6:
 with gc7:
     _k7_on = vals["k7_vykon"] > 0.05
     _k7_status_txt = "● V PREVÁDZKE" if _k7_on else "○ ODSTAVENÝ"
-    _k7_status_col = K7_COLOR if _k7_on else "#999"
+    _k7_status_col = "#a08c00" if _k7_on else "#999"
     st.markdown(f"""
-    <div style="background: linear-gradient(to right, rgba(41,128,185,0.16), rgba(41,128,185,0.02));
+    <div style="background: linear-gradient(to right, rgba(240,220,0,0.20), rgba(240,220,0,0.03));
                 border-left: 6px solid {K7_COLOR};
                 padding: 11px 18px; margin-bottom: 10px; border-radius: 4px;
                 display: flex; align-items: center; justify-content: space-between;">
@@ -1197,6 +1214,10 @@ st.divider()
 
 # ── PREHĽADOVÉ KARTY (3 × 2 mriežka) ────────────────────────────
 total_output = vals["k6_vykon"] + vals["k7_vykon"]
+total_output_prev = (
+    (prev_vals["k6_vykon"] + prev_vals["k7_vykon"])
+    if prev_vals else 0.0
+)
 
 stat_a, stat_b, stat_c = st.columns(3, gap="large")
 with stat_a:
@@ -1206,6 +1227,7 @@ with stat_a:
         "MW",
         HE_BLACK,
         "Súčet výkonu oboch kotlov.",
+        trend=get_trend(total_output, total_output_prev, 0.05),
         decimals=2,
         zero_as_dash=False,
     )
@@ -1310,9 +1332,11 @@ with dl2:
 
 # ── REFRESH ─────────────────────────────────────────────────────
 st.markdown("")
-if st.button("♻️ Obnoviť dáta", type="secondary"):
-    st.cache_data.clear()
-    st.rerun()
+rf1, rf2 = st.columns([1, 1])
+with rf1:
+    if st.button("🔄 Obnoviť dáta", type="secondary", key="refresh_data_btn"):
+        st.cache_data.clear()
+        st.rerun()
 
 # ── PÄTA ────────────────────────────────────────────────────────
 st.markdown(f"""
