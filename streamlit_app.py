@@ -448,14 +448,26 @@ def generate_pdf(export_df: pd.DataFrame, date: datetime.date) -> bytes:
     pdf.rect(start_x, pdf.get_y(), sum(col_w), 0.6, style="F")
     pdf.ln(0.8)
 
+    compact_mode = n_hours >= 24
+
     if n_hours <= 16:
         row_h_tbl = 4.9
     elif n_hours <= 20:
         row_h_tbl = 4.3
-    else:
+    elif n_hours <= 23:
         row_h_tbl = 3.9
+    else:
+        row_h_tbl = 3.6
 
-    pdf.set_font(font_family, "", 8.2)
+    # Drz prehlad + suhrn na jednej strane aj pri 24 hodinach.
+    summary_block_h = 40.0 if not compact_mode else 33.0
+    available_for_rows = (pdf.h - 20) - summary_block_h - pdf.get_y()
+    if n_hours > 0 and available_for_rows > 0:
+        row_h_tbl = min(row_h_tbl, available_for_rows / n_hours)
+    row_h_tbl = max(row_h_tbl, 3.2 if compact_mode else 3.6)
+
+    row_font_size = 8.2 if row_h_tbl >= 3.9 else 7.8
+    pdf.set_font(font_family, "", row_font_size)
     pdf.set_draw_color(*HE_LINE)
     for idx, (_, row) in enumerate(export_df.iterrows()):
         pdf.set_x(start_x)
@@ -508,25 +520,47 @@ def generate_pdf(export_df: pd.DataFrame, date: datetime.date) -> bytes:
     h_k6 = hours_running(k6_ser)
     h_k7 = hours_running(k7_ser)
 
-    if pdf.get_y() + 40 > pdf.h - 20:
+    if pdf.get_y() + summary_block_h > pdf.h - 20:
         pdf.add_page()
         pdf.set_fill_color(*HE_BG)
         pdf.rect(0, 0, pdf.w, pdf.h, style="F")
         pdf.set_xy(10, 12)
 
-    pdf.ln(2.4)
+    section_gap = 2.4 if not compact_mode else 1.4
+    section_marker_y = 0.9 if not compact_mode else 0.6
+    section_marker_h = 5.0 if not compact_mode else 4.2
+    section_font_size = 10.5 if not compact_mode else 9.8
+    section_title_h = 6.0 if not compact_mode else 5.2
+    card_y_offset = 0.6 if not compact_mode else 0.3
+    card_h = 23.5 if not compact_mode else 19.8
+    card_header_h = 4.8 if not compact_mode else 4.2
+    card_title_y = 1.0 if not compact_mode else 0.7
+    card_title_font = 9.0 if not compact_mode else 8.4
+    card_title_h = 3.2 if not compact_mode else 2.8
+    card_values_start = 6.5 if not compact_mode else 5.5
+    card_label_font = 8.1 if not compact_mode else 7.6
+    card_label_h = 3.8 if not compact_mode else 3.2
+    card_value_font = 8.6 if not compact_mode else 8.1
+    card_value_step = 4.1 if not compact_mode else 3.5
+    bar_gap = 3.2 if not compact_mode else 2.2
+    bar_h = 10.5 if not compact_mode else 9.0
+    bar_title_y = 2.1 if not compact_mode else 1.7
+    bar_title_font = 11.8 if not compact_mode else 10.8
+    bar_total_y = 1.4 if not compact_mode else 1.1
+    bar_total_font = 15.5 if not compact_mode else 14.0
+
+    pdf.ln(section_gap)
     section_y = pdf.get_y()
     pdf.set_fill_color(*HE_G)
-    pdf.rect(10, section_y + 0.9, 1.7, 5.0, style="F")
+    pdf.rect(10, section_y + section_marker_y, 1.7, section_marker_h, style="F")
     pdf.set_xy(13, section_y)
-    pdf.set_font(font_family, "B", 10.5)
+    pdf.set_font(font_family, "B", section_font_size)
     pdf.set_text_color(*HE_K)
-    pdf.cell(0, 6.0, txt("PREVÁDZKOVÝ SÚHRN"), ln=True)
+    pdf.cell(0, section_title_h, txt("PREVÁDZKOVÝ SÚHRN"), ln=True)
 
-    card_y = pdf.get_y() + 0.6
+    card_y = pdf.get_y() + card_y_offset
     card_gap = 6
     card_w = (pdf.w - 20 - card_gap) / 2
-    card_h = 23.5
 
     def draw_summary_card(
         x: float,
@@ -540,23 +574,23 @@ def generate_pdf(export_df: pd.DataFrame, date: datetime.date) -> bytes:
         pdf.set_fill_color(*bg)
         pdf.rect(x, card_y, card_w, card_h, style="DF")
         pdf.set_fill_color(*accent)
-        pdf.rect(x, card_y, card_w, 4.8, style="F")
+        pdf.rect(x, card_y, card_w, card_header_h, style="F")
 
-        pdf.set_xy(x + 3, card_y + 1.0)
-        pdf.set_font(font_family, "B", 9)
+        pdf.set_xy(x + 3, card_y + card_title_y)
+        pdf.set_font(font_family, "B", card_title_font)
         pdf.set_text_color(*title_color)
-        pdf.cell(card_w - 6, 3.2, txt(title), align="L")
+        pdf.cell(card_w - 6, card_title_h, txt(title), align="L")
 
-        y = card_y + 6.5
+        y = card_y + card_values_start
         for label, val in values:
             pdf.set_xy(x + 3, y)
-            pdf.set_font(font_family, "", 8.1)
+            pdf.set_font(font_family, "", card_label_font)
             pdf.set_text_color(*HE_MUTED)
-            pdf.cell(card_w * 0.58, 3.8, txt(label), align="L")
-            pdf.set_font(font_family, "B", 8.6)
+            pdf.cell(card_w * 0.58, card_label_h, txt(label), align="L")
+            pdf.set_font(font_family, "B", card_value_font)
             pdf.set_text_color(*HE_TEXT)
-            pdf.cell(card_w * 0.37, 3.8, txt(val), align="R")
-            y += 4.1
+            pdf.cell(card_w * 0.37, card_label_h, txt(val), align="R")
+            y += card_value_step
 
     draw_summary_card(
         10,
@@ -584,8 +618,7 @@ def generate_pdf(export_df: pd.DataFrame, date: datetime.date) -> bytes:
         title_color=HE_K,
     )
 
-    bar_y = card_y + card_h + 3.2
-    bar_h = 10.5
+    bar_y = card_y + card_h + bar_gap
     pdf.set_fill_color(*HE_K)
     pdf.rect(10, bar_y, pdf.w - 20, bar_h, style="F")
     pdf.set_fill_color(*HE_Y)
@@ -593,13 +626,13 @@ def generate_pdf(export_df: pd.DataFrame, date: datetime.date) -> bytes:
     pdf.set_fill_color(*HE_G)
     pdf.rect(12.0, bar_y, 1.2, bar_h, style="F")
 
-    pdf.set_xy(16, bar_y + 2.1)
-    pdf.set_font(font_family, "B", 11.8)
+    pdf.set_xy(16, bar_y + bar_title_y)
+    pdf.set_font(font_family, "B", bar_title_font)
     pdf.set_text_color(255, 255, 255)
     pdf.cell(130, 6.0, txt("CELKOVÁ PRODUKCIA TEPLA"), ln=0)
 
-    pdf.set_xy(pdf.w - 112, bar_y + 1.4)
-    pdf.set_font(font_family, "B", 15.5)
+    pdf.set_xy(pdf.w - 112, bar_y + bar_total_y)
+    pdf.set_font(font_family, "B", bar_total_font)
     pdf.set_text_color(*HE_Y)
     pdf.cell(100, 7.2, txt(f"{fmt_num(prod_total)} MWh"), align="R")
 
