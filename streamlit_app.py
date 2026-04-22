@@ -4,6 +4,13 @@ import io
 import pandas as pd
 import plotly.graph_objects as go
 from fpdf import FPDF
+from zoneinfo import ZoneInfo
+
+APP_TIMEZONE = ZoneInfo("Europe/Bratislava")
+
+
+def now_local() -> datetime.datetime:
+    return datetime.datetime.now(APP_TIMEZONE)
 
 st.set_page_config(page_title="HE · Kotolňa K6 & K7", layout="wide", page_icon="🟡")
 
@@ -289,7 +296,7 @@ def generate_pdf(export_df: pd.DataFrame, date: datetime.date) -> bytes:
                 4,
                 txt(
                     f"Vystavil: Hluchan | Vygenerované: "
-                    f"{datetime.datetime.now().strftime('%d.%m.%Y %H:%M')}"
+                    f"{now_local().strftime('%d.%m.%Y %H:%M')}"
                 ),
                 align="L",
             )
@@ -1000,7 +1007,7 @@ div[data-testid="stDownloadButton"] button:hover {{
 </div>
 """, unsafe_allow_html=True)
 
-today = datetime.date.today()
+today = now_local().date()
 day_labels = [
     f"Dnes ({today.strftime('%d.%m.%Y')})",
     f"Včera ({(today - datetime.timedelta(days=1)).strftime('%d.%m.%Y')})",
@@ -1033,7 +1040,7 @@ for idx, label in enumerate(day_labels):
 sel_label = st.session_state.selected_day_label
 sel_date = day_lookup[sel_label]
 
-now_dt = datetime.datetime.now()
+now_dt = now_local()
 now_h = now_dt.hour
 max_h = now_h if sel_date == today else 24
 
